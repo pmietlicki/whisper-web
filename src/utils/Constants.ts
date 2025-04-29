@@ -143,6 +143,18 @@ export const MODELS: { [key: string]: [string, string] } = {
     "PierreMesure/nb-whisper-tiny-onnx": ["nb-whisper-tiny", "no"],
     "PierreMesure/nb-whisper-base-onnx": ["nb-whisper-base", "no"],
     "PierreMesure/nb-whisper-small-onnx": ["nb-whisper-small", "no"],
+    "PierreMesure/whisper-tiny-faroese-8k-steps-100h-ONNX": [
+        "whisper-tiny-faroese",
+        "fo",
+    ],
+    "PierreMesure/whisper-base-faroese-8k-steps-100h-ONNX": [
+        "whisper-base-faroese",
+        "fo",
+    ],
+    "PierreMesure/whisper-small-faroese-5k-steps-100h-ONNX": [
+        "whisper-small-faroese",
+        "fo",
+    ],
 };
 
 export const DTYPES: string[] = [
@@ -172,6 +184,8 @@ function getDefaultAudioUrl(language: string): string {
             return "https://raw.githubusercontent.com/NbAiLab/nb-whisper/main/audio/king.mp3";
         case "es":
             return "https://raw.githubusercontent.com/PierreMesure/whisper-web/refs/heads/main/public/espanol.mp3";
+        case "fo":
+            return "https://raw.githubusercontent.com/PierreMesure/whisper-web/refs/heads/main/public/faroese.flac";
         default:
             return `https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/${
                 isMobileOrTablet ? "jfk" : "ted_60_16k"
@@ -186,7 +200,11 @@ function getDefaultModel(language: string): string {
         case "no":
             return `PierreMesure/nb-whisper-${
                 isMobileOrTablet ? "tiny" : "base"
-            }`;
+            }-onnx`;
+        case "fo":
+            return `PierreMesure/whisper-${
+                isMobileOrTablet ? "tiny" : "base"
+            }-faroese-8k-steps-100h-ONNX`;
         default:
             return `onnx-community/whisper-${
                 isMobileOrTablet ? "tiny" : "base"
