@@ -6,15 +6,15 @@ import noJSON from "./locale/no.json";
 import esJSON from "./locale/es.json";
 
 const resources = {
-  en: { ...enJSON },
-  sv: { ...svJSON },
-  no: { ...noJSON },
-  es: { ...esJSON },
+    en: { ...enJSON },
+    sv: { ...svJSON },
+    no: { ...noJSON },
+    es: { ...esJSON },
 };
 
 i18n.use(initReactI18next).init({
-  resources,
-  lng: "en",
+    resources,
+    lng: "en",
 });
 
 export const availableLanguages = Object.keys(resources);

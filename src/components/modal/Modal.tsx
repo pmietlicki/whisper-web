@@ -1,4 +1,10 @@
-import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from "@headlessui/react";
+import {
+    Dialog,
+    DialogPanel,
+    DialogTitle,
+    Transition,
+    TransitionChild,
+} from "@headlessui/react";
 import { t } from "i18next";
 import { Fragment, JSX } from "react";
 
@@ -23,10 +29,9 @@ export default function Modal({
     submitEnabled = true,
     cacheSize = 0,
 }: Props) {
-
     const onClear = () => {
         onClose();
-        caches.delete('transformers-cache');
+        caches.delete("transformers-cache");
     };
 
     return (
@@ -90,19 +95,19 @@ export default function Modal({
                                         className='inline-flex ml-2 justify-center rounded-md border border-transparent bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-900 hover:bg-indigo-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-all duration-300'
                                         onClick={onClose}
                                     >
-                                        {t('modal.close')}
+                                        {t("modal.close")}
                                     </button>
-                                {cacheSize != 0 && (
-                                    <button
-                                        type='button'
-                                        className='inline-flex justify-center rounded-md border border-transparent bg-red-100 px-4 py-2 text-sm font-medium text-red-900 hover:bg-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 transition-all duration-300'
-                                        onClick={onClear}
-                                    >
-                                        {cacheSize !== -1
-                                            ? `${t("manager.clear_cache")} (${cacheSize}MB)`
-                                            : t("manager.clear_cache")}
-                                    </button>
-                                )}
+                                    {cacheSize != 0 && (
+                                        <button
+                                            type='button'
+                                            className='inline-flex justify-center rounded-md border border-transparent bg-red-100 px-4 py-2 text-sm font-medium text-red-900 hover:bg-red-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 transition-all duration-300'
+                                            onClick={onClear}
+                                        >
+                                            {cacheSize !== -1
+                                                ? `${t("manager.clear_cache")} (${cacheSize}MB)`
+                                                : t("manager.clear_cache")}
+                                        </button>
+                                    )}
                                 </div>
                             </DialogPanel>
                         </TransitionChild>
