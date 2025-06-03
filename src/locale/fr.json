@@ -1,0 +1,56 @@
+{
+    "translation": {
+        "app": {
+            "title": "Whisper Web",
+            "subtitle": "Transcrivez la parole directement dans votre navigateur !",
+            "footer": "La transcription est effectuée localement sur votre appareil. Vos données restent privées.",
+            "footer_credits": "Créé par <authorLink>Pierre Mesure</authorLink> basé sur une démo de <demoLink>Xenova</demoLink> ♥️",
+            "webgpu_not_supported_1": "WebGPU n'est pas supporté",
+            "webgpu_not_supported_2": "par ce navigateur :("
+        },
+        "modal": {
+            "close": "Fermer"
+        },
+        "manager": {
+            "loading": "Chargement des fichiers du modèle... (une seule fois)",
+            "select_model": "Sélectionnez le modèle à utiliser.",
+            "select_language": "Sélectionnez la langue source.",
+            "select_task": "Sélectionnez la tâche à effectuer.",
+            "transcribe": "Transcrire",
+            "translate": "Traduire (vers l'anglais)",
+            "from_url": "Depuis une URL",
+            "from_url_description": "Entrez l'URL du fichier audio que vous souhaitez charger.",
+            "from_file": "Depuis un fichier",
+            "record": "Enregistrer",
+            "record_description": "Enregistrer l'audio avec votre microphone",
+            "submit": "Charger",
+            "settings": "Paramètres",
+            "gpu": "GPU",
+            "gpu_disabled": "GPU (navigateur non supporté)",
+            "clear_cache": "Vider le cache",
+            "info_title": "Whisper-web",
+            "info_content": "Whisper-web est un petit site web qui vous aide à transcrire la parole en texte.<1></1><1></1>La première fois que vous lui donnez un fichier, il téléchargera un modèle IA open source et effectuera la transcription localement dans votre navigateur. Cela signifie que votre fichier audio ne quitte jamais votre appareil. Cela signifie également que la transcription sera lente ou échouera si votre ordinateur/smartphone n'est pas assez puissant pour l'effectuer.<1></1><1></1>Dans les paramètres (coin inférieur droit), vous pouvez choisir parmi différents modèles et niveaux de quantification. Un modèle plus petit avec une quantification plus faible sera plus rapide mais fera plus d'erreurs. Par défaut, Whisper-web utilise des petits modèles mais vous pouvez essayer un plus grand et voir s'il fonctionne sur votre appareil.<1></1><1></1>Pour la plupart des langues, il est préférable d'utiliser les <4>modèles officiels d'OpenAI</4> (Multilingue) mais pour le suédois ou le norvégien, il est recommandé d'utiliser des versions qui ont été spécifiquement entraînées pour elles.<1></1><1></1>Les modèles suédois s'appellent <8>KB-whisper</8> et ont été entraînés par la <12>bibliothèque nationale</12> sur des données de débats parlementaires et du service public suédois. Les norvégiens sont nommés <16>nb-whisper</16> et ont également été entraînés par la <20>bibliothèque nationale</20> du pays.<1></1><1></1>Le code source de ce projet est disponible sur <23>Github</23>. N'hésitez pas à le réutiliser ou à y contribuer.<1></1><1></1>Le site web est hébergé sur <26>statichost.eu</26>, un service respectueux de la vie privée pour héberger des sites statiques."
+        },
+        "recorder": {
+            "start_recording": "Démarrer l'enregistrement",
+            "stop_recording": "Arrêter l'enregistrement ({{duration}})"
+        },
+        "transcribe_button": {
+            "loading_model": "Chargement du modèle...",
+            "transcribing": "Transcription en cours...",
+            "transcribe": "Transcrire l'audio"
+        },
+        "transcript": {
+            "export": "Exporter",
+            "tokens_per_second": "tokens/seconde"
+        },
+        "language_selector": {
+            "title": "Langue",
+            "sv": "Suédois",
+            "no": "Norvégien",
+            "en": "Anglais",
+            "es": "Espagnol",
+            "fr": "Français"
+        }
+    }
+}

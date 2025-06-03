@@ -134,6 +134,9 @@ export const MODELS: { [key: string]: [string, string] } = {
     "onnx-community/whisper-small": ["small", ""],
     "onnx-community/whisper-medium-ONNX": ["medium", ""],
     "onnx-community/whisper-large-v3-turbo": ["large-v3-turbo", ""],
+    "onnx-community/whisper-tiny-fr": ["whisper-tiny-fr", "fr"],
+    "onnx-community/whisper-base-fr": ["whisper-base-fr", "fr"],
+    "onnx-community/whisper-small-fr": ["whisper-small-fr", "fr"],
     "onnx-community/distil-small.en": ["distil-small.en", "en"],
     "KBLab/kb-whisper-tiny": ["kb-whisper-tiny", "sv"],
     "KBLab/kb-whisper-base": ["kb-whisper-base", "sv"],
@@ -197,6 +200,8 @@ function getDefaultModel(language: string): string {
     switch (language) {
         case "sv":
             return `KBLab/kb-whisper-${isMobileOrTablet ? "tiny" : "base"}`;
+        case "fr":
+            return `onnx-community/whisper-${isMobileOrTablet ? "tiny" : "base"}`;
         case "no":
             return `PierreMesure/nb-whisper-${
                 isMobileOrTablet ? "tiny" : "base"
@@ -213,7 +218,15 @@ function getDefaultModel(language: string): string {
 }
 
 function getDefaultLanguage(language: string): string {
-    return (language as keyof typeof LANGUAGES) || "en";
+    switch (language) {
+        case "sv":
+        case "no":
+        case "fo":
+        case "fr":
+            return language;
+        default:
+            return "en"; // Default to English if no specific model language
+    }
 }
 
 export default {
@@ -224,5 +237,5 @@ export default {
     getDefaultLanguage,
     DEFAULT_QUANTIZED: isMobileOrTablet,
     DEFAULT_DTYPE: "q8",
-    DEFAULT_GPU: false,
+    DEFAULT_GPU: true, // Changed to true
 };

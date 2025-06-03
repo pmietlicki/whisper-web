@@ -4,7 +4,9 @@
             "title": "Whisper Web",
             "subtitle": "Transcribe speech directly in your browser!",
             "footer": "The transcription is performed locally on your device. Your data remains private.",
-            "footer_credits": "Created by <authorLink>Pierre Mesure</authorLink> based on a demo by <demoLink>Xenova</demoLink> ♥️"
+            "footer_credits": "Created by <authorLink>Pierre Mesure</authorLink> based on a demo by <demoLink>Xenova</demoLink> ♥️",
+            "webgpu_not_supported_1": "WebGPU is not supported",
+            "webgpu_not_supported_2": "by this browser :("
         },
         "modal": {
             "close": "Close"
@@ -47,7 +49,8 @@
             "sv": "Swedish",
             "no": "Norwegian",
             "en": "English",
-            "es": "Spanish"
+            "es": "Spanish",
+            "fr": "Français"
         }
     }
 }

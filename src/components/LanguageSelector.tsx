@@ -5,6 +5,7 @@ import CircleFlagsLangSv from "~icons/circle-flags/lang-sv";
 import CircleFlagsLangNo from "~icons/circle-flags/lang-no";
 import CircleFlagsLangEn from "~icons/circle-flags/lang-en";
 import CircleFlagsLangEs from "~icons/circle-flags/lang-es";
+import CircleFlagsLangFr from "~icons/circle-flags/lang-fr"; // Added French flag icon
 import { JSX } from "react";
 
 export default function LanguageSelector(props: {
@@ -19,6 +20,7 @@ export default function LanguageSelector(props: {
         no: <CircleFlagsLangNo className='inline-block' />,
         en: <CircleFlagsLangEn className='inline-block' />,
         es: <CircleFlagsLangEs className='inline-block' />,
+        fr: <CircleFlagsLangFr className='inline-block' />, // Added French flag to the map
     };
 
     return (
