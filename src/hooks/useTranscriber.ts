@@ -86,7 +86,12 @@ export function useTranscriber(): Transcriber {
             case "initiate":
                 // Model file start load: add a new progress item to the list.
                 setIsModelLoading(true);
-                setProgressItems((prev) => [...prev, message]);
+                setProgressItems((prev) => {
+                    const exists = prev.some(
+                        (item) => item.file === message.file,
+                    );
+                    return exists ? prev : [...prev, message];
+                });
                 break;
             case "ready":
                 setIsModelLoading(false);

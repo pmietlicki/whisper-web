@@ -202,8 +202,8 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     {props.transcriber.progressItems.length > 0 && (
                         <div className='relative z-10 p-4 w-full text-center'>
                             <label>{t("manager.loading")}</label>
-                            {props.transcriber.progressItems.map((data) => (
-                                <div key={data.file}>
+                            {props.transcriber.progressItems.map((data, index) => (
+                                <div key={`${data.file}-${index}`}>
                                     <Progress
                                         text={data.file}
                                         percentage={data.progress}
