@@ -45,8 +45,11 @@ RUN npm run build
 # ------------ Étape 2 : image finale avec nginx non-root -------------------------
 FROM nginxinc/nginx-unprivileged:alpine
 
-# Copie des fichiers
+# Copie des fichiers générés
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# Configuration nginx personnalisée (COEP/COOP pour WebAssembly threadé)
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Exposition du port 8080 (port par défaut de nginx-unprivileged)
 EXPOSE 8080
