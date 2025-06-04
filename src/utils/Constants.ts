@@ -176,8 +176,14 @@ export enum AudioSource {
 
 const isMobileOrTablet = mobileTabletCheck();
 
+function getBaseLang(language: string): string {
+    return language.split("-")[0].toLowerCase();
+}
+
+
 function getDefaultAudioUrl(language: string): string {
-    switch (language) {
+    const lang = getBaseLang(language);
+    switch (lang) {
         case "sv":
             return "https://raw.githubusercontent.com/PierreMesure/whisper-web/refs/heads/main/public/palme.wav";
         case "no":
@@ -194,7 +200,8 @@ function getDefaultAudioUrl(language: string): string {
 }
 
 function getDefaultModel(language: string): string {
-    switch (language) {
+    const lang = getBaseLang(language);
+    switch (lang) {
         case "sv":
             return `KBLab/kb-whisper-${isMobileOrTablet ? "tiny" : "small"}`;
         case "fr":
@@ -215,14 +222,14 @@ function getDefaultModel(language: string): string {
 }
 
 function getDefaultLanguage(language: string): string {
-    const code = language.slice(0, 2).toLowerCase();
-    switch (code) {
+    const lang = getBaseLang(language);
+    switch (lang) {
         case "sv":
         case "no":
         case "es":
         case "fo":
         case "fr":
-            return code;
+            return lang;
         default:
             return "en"; // Default to English if no specific model language
     }

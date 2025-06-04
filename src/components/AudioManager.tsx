@@ -408,9 +408,9 @@ function SettingsModal(props: {
     const getModelLanguage = () => {
         if (props.transcriber.model in MODELS) {
             const [, lang] = MODELS[props.transcriber.model];
-            return lang || props.transcriber.language;
+            return (lang || props.transcriber.language)?.slice(0, 2).toLowerCase();
         }
-        return props.transcriber.language;
+        return props.transcriber.language?.slice(0, 2).toLowerCase();
     };
 
     return (
@@ -502,7 +502,7 @@ function SettingsModal(props: {
                         className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed'
                         value={
                             isMultilingual
-                                ? props.transcriber.language
+                                ? props.transcriber.language?.slice(0, 2)
                                 : getModelLanguage()
                         }
                         onChange={(e) => {
