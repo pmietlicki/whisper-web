@@ -214,15 +214,17 @@ function getDefaultModel(language: string): string {
     }
 }
 
-
-function normalize(code: string) {
-    return code.split('-')[0].toLowerCase();   // "fr-FR" → "fr"
-  }
-  
-  export function getDefaultLanguage(raw: string): string {
-    const code = normalize(raw);
-    return code in LANGUAGES ? code : "en";
-  }
+function getDefaultLanguage(language: string): string {
+    switch (language) {
+        case "sv":
+        case "no":
+        case "fo":
+        case "fr":
+            return language;
+        default:
+            return "en"; // Default to English if no specific model language
+    }
+}
 
 export default {
     SAMPLING_RATE: 16000,
@@ -231,6 +233,6 @@ export default {
     DEFAULT_SUBTASK: "transcribe",
     getDefaultLanguage,
     DEFAULT_QUANTIZED: isMobileOrTablet,
-    DEFAULT_DTYPE: "fp16",
-    DEFAULT_GPU: true,
+    DEFAULT_DTYPE: "q8",
+    DEFAULT_GPU: true, // Changed to true
 };

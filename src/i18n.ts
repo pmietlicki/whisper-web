@@ -34,7 +34,6 @@ i18n
       caches: ["localStorage"],
     },
     interpolation: { escapeValue: false },
-    debug: false,
   });
 
 export const availableLanguages = Object.keys(resources);
