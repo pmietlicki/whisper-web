@@ -48,6 +48,34 @@ FROM nginxinc/nginx-unprivileged:alpine
 # Copie des fichiers
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Création de la configuration Nginx personnalisée
+RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
+server {
+    listen 8080;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Gestion des fichiers statiques
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # SPA fallback pour toutes les autres routes
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Optimisations
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+}
+EOF
+
 # Exposition du port 8080 (port par défaut de nginx-unprivileged)
 EXPOSE 8080
 
