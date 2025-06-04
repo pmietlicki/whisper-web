@@ -42,8 +42,13 @@ RUN echo "=== TypeScript version ===" && tsc --version
 # Build
 RUN npm run build
 
-# ------------ Étape 2 : image finale ultra-légère -------------------------
-FROM nginx:alpine
+# ------------ Étape 2 : image finale avec nginx non-root -------------------------
+FROM nginxinc/nginx-unprivileged:alpine
+
+# Copie des fichiers
 COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
+
+# Exposition du port 8080 (port par défaut de nginx-unprivileged)
+EXPOSE 8080
+
 CMD ["nginx", "-g", "daemon off;"]
