@@ -6,6 +6,8 @@ import { Trans, useTranslation } from "react-i18next";
 import LanguageSelector from "./components/LanguageSelector";
 import { useEffect, useState } from "react";
 
+const SHOW_CREDITS = import.meta.env.VITE_SHOW_CREDITS === "true";
+
 function App() {
     const transcriber = useTranscriber();
 
@@ -35,9 +37,11 @@ function App() {
                     <Transcript transcribedData={transcriber.output} />
                 </div>
 
+
                 <footer className='text-center m-4'>
                     <b>{t("app.footer")}</b>
                     <br />
+                    {SHOW_CREDITS && (
                     <Trans
                         i18nKey='app.footer_credits'
                         components={{
@@ -55,6 +59,7 @@ function App() {
                             ),
                         }}
                     />
+                    )}
                 </footer>
             </div>
             <LanguageSelector

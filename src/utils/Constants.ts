@@ -196,20 +196,20 @@ function getDefaultAudioUrl(language: string): string {
 function getDefaultModel(language: string): string {
     switch (language) {
         case "sv":
-            return `KBLab/kb-whisper-${isMobileOrTablet ? "tiny" : "base"}`;
+            return `KBLab/kb-whisper-${isMobileOrTablet ? "tiny" : "small"}`;
         case "fr":
-            return `onnx-community/whisper-${isMobileOrTablet ? "tiny" : "base"}`;
+            return `onnx-community/whisper-${isMobileOrTablet ? "tiny" : "small"}`;
         case "no":
             return `PierreMesure/nb-whisper-${
-                isMobileOrTablet ? "tiny" : "base"
+                isMobileOrTablet ? "tiny" : "small"
             }-onnx`;
         case "fo":
             return `PierreMesure/whisper-${
-                isMobileOrTablet ? "tiny" : "base"
+                isMobileOrTablet ? "tiny" : "small"
             }-faroese-8k-steps-100h-ONNX`;
         default:
             return `onnx-community/whisper-${
-                isMobileOrTablet ? "tiny" : "base"
+                isMobileOrTablet ? "tiny" : "small"
             }`;
     }
 }
