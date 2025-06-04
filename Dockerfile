@@ -7,8 +7,10 @@ RUN apt-get update -y && \
 WORKDIR /app
 RUN git clone --depth 1 https://github.com/pmietlicki/whisper-web.git .
 
-# Installation complète, sans les optional natives (onnx/esbuild linux-musl etc.)
-RUN npm ci --include=dev --omit=optional --no-audit --no-fund
+ENV npm_config_onnxruntime_node_install=skip
+
+# on installe TOUTES les dépendances, y compris optionnelles
+RUN npm ci --include=dev --no-audit --no-fund
 
 # Build
 RUN npm run build
