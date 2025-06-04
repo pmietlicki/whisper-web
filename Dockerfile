@@ -23,9 +23,8 @@ RUN git reset --hard HEAD
 # Nettoyage du cache npm global
 RUN npm cache clean --force
 
-# Vérification et correction du package.json si nécessaire
+# Vérification du package.json
 RUN echo "=== Contenu du package.json ===" && cat package.json
-RUN echo "=== Vérification de la syntaxe JSON ===" && python3 -m json.tool package.json > /dev/null || echo "ATTENTION: package.json malformé"
 
 # Installation FRAÎCHE des dépendances
 RUN npm install --include=dev --no-audit --no-fund --verbose
