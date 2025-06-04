@@ -243,5 +243,5 @@ export default {
     getDefaultLanguage,
     DEFAULT_QUANTIZED: isMobileOrTablet,
     DEFAULT_DTYPE: "fp16",
-    DEFAULT_GPU: true, // Changed to true
+    DEFAULT_GPU: typeof navigator !== "undefined" && !!navigator.gpu,
 };

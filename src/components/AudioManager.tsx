@@ -387,7 +387,6 @@ function SettingsModal(props: {
         setIsMultilingual(isModelMultilingual);
     }, [props.transcriber.model]);
 
-    // @ts-expect-error navigator.gpu not yet supported
     const IS_WEBGPU_AVAILABLE = !!navigator.gpu;
 
     const [cacheSize, setCacheSize] = useState<number>(0);
