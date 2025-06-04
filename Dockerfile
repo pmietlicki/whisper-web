@@ -49,7 +49,7 @@ FROM nginxinc/nginx-unprivileged:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Configuration nginx personnalisée (COEP/COOP pour WebAssembly threadé)
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Exposition du port 8080 (port par défaut de nginx-unprivileged)
 EXPOSE 8080
