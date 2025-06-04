@@ -215,12 +215,14 @@ function getDefaultModel(language: string): string {
 }
 
 function getDefaultLanguage(language: string): string {
-    switch (language) {
+    const code = language.slice(0, 2).toLowerCase();
+    switch (code) {
         case "sv":
         case "no":
+        case "es":
         case "fo":
         case "fr":
-            return language;
+            return code;
         default:
             return "en"; // Default to English if no specific model language
     }
