@@ -6,11 +6,15 @@ import { Trans, useTranslation } from "react-i18next";
 import LanguageSelector from "./components/LanguageSelector";
 import { useEffect, useState } from "react";
 
+const short = (lng: string) => lng.split("-")[0].toLowerCase();
+
 function App() {
     const transcriber = useTranscriber();
 
     const { i18n } = useTranslation();
-    const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+    const [currentLanguage, setCurrentLanguage] = useState(
+        short(i18n.resolvedLanguage || i18n.language)
+      );
 
     const handleChangeLanguage = (newLanguage: string) => {
         setCurrentLanguage(newLanguage);
@@ -18,8 +22,8 @@ function App() {
     };
 
     useEffect(() => {
-        setCurrentLanguage(i18n.language);
-    }, [i18n.language]);
+        setCurrentLanguage(short(i18n.resolvedLanguage || i18n.language));
+      }, [i18n.resolvedLanguage, i18n.language]);
 
     return (
         <>
