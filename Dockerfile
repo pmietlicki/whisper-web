@@ -7,7 +7,7 @@ RUN apk add --no-cache git
 
 # Récupération du code source
 RUN git clone https://github.com/pmietlicki/whisper-web.git .
-RUN npm ci
+RUN npm install
 RUN npm run build
 
 # Étape finale : serveur web léger
