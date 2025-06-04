@@ -228,10 +228,10 @@ function getDefaultLanguage(language: string): string {
         case "no":
         case "es":
         case "fo":
-        case "fr":
+        case "en":
             return lang;
         default:
-            return "en"; // Default to English if no specific model language
+            return "fr"; // Default to English if no specific model language
     }
 }
 

@@ -15,26 +15,30 @@ const resources = {
     fr: {...frJSON },
 };
 
+localStorage.removeItem("lng");
+
 i18n
-  .use(LanguageDetector) 
+  .use(LanguageDetector)
   .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: "en",
-    supportedLngs: Object.keys(resources),
-    load: "languageOnly",         
-    detection: {
-      order: [
-        "localStorage",         
-        "navigator",             
-        "htmlTag",                
-        "path", "subdomain"
-      ],
-      lookupLocalStorage: "lng",  
-      caches: ["localStorage"],
+  .init(
+    {
+      resources,
+      fallbackLng: "en",
+      supportedLngs: Object.keys(resources),
+      load: "languageOnly",
+      detection: {
+        order: ["localStorage", "navigator", "htmlTag", "path", "subdomain"],
+        lookupLocalStorage: "lng",
+        caches: ["localStorage"],
+      },
+      interpolation: { escapeValue: false },
     },
-    interpolation: { escapeValue: false },
-  });
+    () => {
+      const code = i18n.language.slice(0, 2).toLowerCase();
+      i18n.changeLanguage(code);
+    },
+  );
+
 
 export const availableLanguages = Object.keys(resources);
 export default i18n;
