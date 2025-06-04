@@ -6,10 +6,10 @@ WORKDIR /app
 RUN git clone --depth 1 https://github.com/pmietlicki/whisper-web.git .
 
 # -- corrige le bug npm -----------------------------------------------------
-RUN corepack enable && npm install -g npm@11
+RUN corepack enable && npm install -g npm@11 typescript
 
 # -- install + build --------------------------------------------------------
-RUN npm install --include=dev --legacy-peer-deps
+RUN npm ci --include=dev --legacy-peer-deps
 RUN npm run build
 
 # ---------- Étape 2 : image statique --------------------------------------
