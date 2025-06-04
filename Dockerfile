@@ -14,17 +14,24 @@ RUN git clone --depth 1 https://github.com/pmietlicki/whisper-web.git .
 # Configuration NPM
 ENV npm_config_onnxruntime_node_install=skip
 
-# Installation explicite de TypeScript globalement comme fallback
+# Installation explicite de TypeScript globalement
 RUN npm install -g typescript
 
-# Installation des dépendances avec gestion d'erreurs
-RUN npm ci --include=dev --no-audit --no-fund || (cat /root/.npm/_logs/*-debug-0.log && exit 1)
+# Nettoyage du cache npm et installation des dépendances
+RUN npm cache clean --force
+RUN npm ci --include=dev --no-audit --no-fund --verbose || (cat /root/.npm/_logs/*-debug-0.log && exit 1)
+
+# Installation explicite des types manquants
+RUN npm install --save-dev @types/json-schema @types/react @types/react-dom || true
 
 # Vérification que tsc est disponible
 RUN which tsc || npm list typescript || npm install typescript
 
-# Build avec gestion d'erreurs
-RUN npm run build
+# Debug: Lister les packages installés
+RUN npm list --depth=0 || true
+
+# Build avec gestion d'erreurs et mode verbose
+RUN npm run build -- --verbose
 
 # ------------ Étape 2 : image finale ultra-légère -------------------------
 FROM nginx:alpine
