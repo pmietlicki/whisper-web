@@ -26,13 +26,13 @@ function mobileTabletCheck() {
 // https://help.openai.com/en/articles/7031512-whisper-api-faq
 // https://github.com/openai/whisper/blob/248b6cb124225dd263bb9bd32d060b6517e067f8/whisper/tokenizer.py#L79
 export const LANGUAGES = {
+    fr: "french",
     en: "english",
     zh: "chinese",
     de: "german",
     es: "spanish/castilian",
     ru: "russian",
     ko: "korean",
-    fr: "french",
     ja: "japanese",
     pt: "portuguese",
     tr: "turkish",
