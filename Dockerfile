@@ -1,5 +1,5 @@
 # ------------ Étape 1 : build (Debian slim) -------------------------------
-FROM node:20-slim AS build
+FROM node:18-slim AS build
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends git ca-certificates && \
     rm -rf /var/lib/apt/lists/*
