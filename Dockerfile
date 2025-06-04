@@ -7,9 +7,6 @@ RUN apt-get update -y && \
 WORKDIR /app
 RUN git clone --depth 1 https://github.com/pmietlicki/whisper-web.git .
 
-# Mise à jour npm
-RUN corepack enable && npm install -g npm@11
-
 # Installation complète, sans les optional natives (onnx/esbuild linux-musl etc.)
 RUN npm ci --include=dev --omit=optional --no-audit --no-fund
 
