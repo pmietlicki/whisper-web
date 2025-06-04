@@ -15,8 +15,6 @@ const resources = {
     fr: {...frJSON },
 };
 
-localStorage.removeItem("lng");
-
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -34,11 +32,14 @@ i18n
       interpolation: { escapeValue: false },
     },
     () => {
+      // ► Normalisation en 2 lettres minuscules
       const code = i18n.language.slice(0, 2).toLowerCase();
-      i18n.changeLanguage(code);
+      if (i18n.language !== code) {
+        i18n.changeLanguage(code);       // met i18next à jour
+        localStorage.setItem("lng", code); // met à jour la clé cache
+      }
     },
   );
-
 
 export const availableLanguages = Object.keys(resources);
 export default i18n;
