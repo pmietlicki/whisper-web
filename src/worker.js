@@ -31,20 +31,41 @@ class PipelineFactory {
             };
 
             try {
-                this.instance = pipeline(this.task, this.model, options);
+                this.instance = await pipeline(this.task, this.model, options);
             } catch (error) {
+                if (this.instance !== null) {
+                    try {
+                        await this.instance.dispose();
+                    } catch (_) {
+                        // ignore
+                    }
+                    this.instance = null;
+                }
+
                 if (this.gpu) {
                     console.warn(
                         "WebGPU failed, falling back to CPU",
                         error,
                     );
                     this.gpu = false;
-                    if (this.instance !== null) {
-                        (await this.instance).dispose();
-                        this.instance = null;
-                    }
                     options.device = "cpu";
-                    this.instance = pipeline(this.task, this.model, options);
+                    try {
+                        this.instance = await pipeline(
+                            this.task,
+                            this.model,
+                            options,
+                        );
+                    } catch (error2) {
+                        if (this.instance !== null) {
+                            try {
+                                await this.instance.dispose();
+                            } catch (_) {
+                                // ignore
+                            }
+                            this.instance = null;
+                        }
+                        throw error2;
+                    }
                 } else {
                     throw error;
                 }
