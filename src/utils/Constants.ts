@@ -135,14 +135,19 @@ export const MODELS: { [key: string]: [string, string] } = {
     "onnx-community/whisper-medium-ONNX": ["medium", ""],
     "onnx-community/whisper-large-v3-turbo": ["large-v3-turbo", ""],
     "onnx-community/distil-small.en": ["distil-small.en", "en"],
+    // French-optimized models
+    "onnx-community/whisper-small-cv11-french-ONNX": ["whisper-small-cv11-french", "fr"],
+    // Swedish models
     "KBLab/kb-whisper-tiny": ["kb-whisper-tiny", "sv"],
     "KBLab/kb-whisper-base": ["kb-whisper-base", "sv"],
     "KBLab/kb-whisper-small": ["kb-whisper-small", "sv"],
     "KBLab/kb-whisper-medium": ["kb-whisper-medium", "sv"],
     "KBLab/kb-whisper-large": ["kb-whisper-large", "sv"],
+    // Norwegian models
     "PierreMesure/nb-whisper-tiny-onnx": ["nb-whisper-tiny", "no"],
     "PierreMesure/nb-whisper-base-onnx": ["nb-whisper-base", "no"],
     "PierreMesure/nb-whisper-small-onnx": ["nb-whisper-small", "no"],
+    // Faroese models
     "PierreMesure/whisper-tiny-faroese-8k-steps-100h-ONNX": [
         "whisper-tiny-faroese",
         "fo",
