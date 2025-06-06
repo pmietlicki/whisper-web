@@ -1,4 +1,5 @@
 import { pipeline, WhisperTextStreamer } from "@huggingface/transformers";
+import { DTYPES } from "./utils/Constants";
 
 // Define model factories
 // Ensures only one model is created of each type
@@ -18,15 +19,39 @@ class PipelineFactory {
 
     static async getInstance(progress_callback = null) {
         if (this.instance === null) {
+            let dtype = this.dtype;
+
+            // Convert single dtype to model-wide options
+            if (typeof dtype === "string") {
+                if (!DTYPES.includes(dtype)) {
+                    console.warn(
+                        `Invalid dtype "${dtype}" provided, falling back to \"fp32\"`,
+                    );
+                    dtype = "fp32";
+                }
+                dtype = {
+                    encoder_model: dtype,
+                    decoder_model_merged: dtype,
+                };
+            } else if (dtype && typeof dtype === "object") {
+                // Validate object entries
+                for (const k in dtype) {
+                    if (!DTYPES.includes(dtype[k])) {
+                        console.warn(
+                            `Invalid dtype "${dtype[k]}" for ${k}, using \"fp32\"`,
+                        );
+                        dtype[k] = "fp32";
+                    }
+                }
+            } else {
+                dtype = {
+                    encoder_model: "fp32",
+                    decoder_model_merged: "fp32",
+                };
+            }
             const options = {
-                dtype: {
-                    encoder_model:
-                        this.model === "onnx-community/whisper-large-v3-turbo"
-                            ? "fp16"
-                            : "fp32",
-                    decoder_model_merged: "q4",
-                },
-                device: this.gpu ? "webgpu" : "cpu",
+                dtype,
+                device: this.gpu ? "webgpu" : "wasm",
                 progress_callback,
             };
 
@@ -48,7 +73,7 @@ class PipelineFactory {
                         error,
                     );
                     this.gpu = false;
-                    options.device = "cpu";
+                    options.device = "wasm";
                     try {
                         this.instance = await pipeline(
                             this.task,

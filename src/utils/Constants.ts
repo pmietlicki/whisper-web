@@ -247,6 +247,6 @@ export default {
     DEFAULT_SUBTASK: "transcribe",
     getDefaultLanguage,
     DEFAULT_QUANTIZED: isMobileOrTablet,
-    DEFAULT_DTYPE: "fp16",
+    DEFAULT_DTYPE: "q4",
     DEFAULT_GPU: typeof navigator !== "undefined" && !!navigator.gpu,
 };
