@@ -18,16 +18,37 @@ class PipelineFactory {
 
     static async getInstance(progress_callback = null) {
         if (this.instance === null) {
-            this.instance = pipeline(this.task, this.model, {
+            const options = {
                 dtype: {
-                    encoder_model: this.model === "onnx-community/whisper-large-v3-turbo"
-                        ? "fp16"
-                        : "fp32",
+                    encoder_model:
+                        this.model === "onnx-community/whisper-large-v3-turbo"
+                            ? "fp16"
+                            : "fp32",
                     decoder_model_merged: "q4",
                 },
-                device: "webgpu",
+                device: this.gpu ? "webgpu" : "cpu",
                 progress_callback,
-            });            
+            };
+
+            try {
+                this.instance = pipeline(this.task, this.model, options);
+            } catch (error) {
+                if (this.gpu) {
+                    console.warn(
+                        "WebGPU failed, falling back to CPU",
+                        error,
+                    );
+                    this.gpu = false;
+                    if (this.instance !== null) {
+                        (await this.instance).dispose();
+                        this.instance = null;
+                    }
+                    options.device = "cpu";
+                    this.instance = pipeline(this.task, this.model, options);
+                } else {
+                    throw error;
+                }
+            }
         }
 
         return this.instance;
@@ -138,8 +159,8 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         },
     });
 
-    // Actually run transcription
-    const output = await transcriber(audio, {
+    // Options for the transcription call
+    const params = {
         // Greedy
         top_k: 0,
         do_sample: false,
@@ -158,14 +179,43 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
 
         // Callback functions
         streamer, // after each generation step
-    }).catch((error) => {
+    };
+
+    let output;
+    try {
+        // Actually run transcription
+        output = await transcriber(audio, params);
+    } catch (error) {
         console.error(error);
-        self.postMessage({
-            status: "error",
-            data: error,
-        });
-        return null;
-    });
+        if (gpu) {
+            try {
+                (await p.getInstance()).dispose();
+            } catch (_) {
+                // ignore
+            }
+            p.instance = null;
+            p.gpu = false;
+            try {
+                const cpuTranscriber = await p.getInstance((data) => {
+                    self.postMessage(data);
+                });
+                output = await cpuTranscriber(audio, params);
+            } catch (error2) {
+                console.error(error2);
+                self.postMessage({
+                    status: "error",
+                    data: error2,
+                });
+                return null;
+            }
+        } else {
+            self.postMessage({
+                status: "error",
+                data: error,
+            });
+            return null;
+        }
+    }
 
     return {
         tps,

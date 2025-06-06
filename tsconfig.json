@@ -6,7 +6,8 @@
   ],
   "compilerOptions": {
     "types": [
-        "unplugin-icons/types/react"
+        "unplugin-icons/types/react",
+        "@webgpu/types"
         ]
   }
 }
