@@ -1,10 +1,12 @@
 # Whisper Web
 
+## English
+
 Whisper-web is a webapplication that allows you to transcribe sound files to text completely locally in your web browser.
 
 ![A screenshot of the application](./screenshot.png)
 
-This repository is a fork of [Xenova/whisper-web](https://github.com/xenova/whisper-web).
+This repository is a fork of [PierreMesure/whisper-web](https://github.com/PierreMesure/whisper-web), which is itself a fork of [Xenova/whisper-web](https://github.com/xenova/whisper-web).
 
 Here are the main differences:
 
@@ -20,20 +22,36 @@ Here are the main differences:
 - Choose your own quantization level for the model
 - Clear cache with a button
 
-The main application is available at [whisper-web.mesu.re](https://whisper-web.mesu.re). It is hosted on [statichost.eu](https://statichost.eu).
+The main application is available at [whisper-web.pascal-mietlicki.fr](https://whisper-web.pascal-mietlicki.fr/).
 
-## KB-Whisper
+## Français
 
-Initially, this project aimed at making the [Swedish KB-Whisper models](https://huggingface.co/collections/KBLab/kb-whisper-67af9eafb24da903b63cc4aa) fine-tuned by the [Swedish National library](https://www.kb.se/samverkan-och-utveckling/nytt-fran-kb/nyheter-samverkan-och-utveckling/2025-02-20-valtranad-ai-modell-forvandlar-tal-till-text.html) ♥️ more available for easy transcription of Swedish audio.
+Whisper-web est une application web qui vous permet de transcrire des fichiers audio en texte complètement localement dans votre navigateur web.
 
-A version of the website with Swedish as default language is still available at [kb-whisper.mesu.re](https://kb-whisper.mesu.re) (hosted in the EU by [statichost.eu](https://statichost.eu)) and the source code is on the [swedish branch](https://github.com/PierreMesure/whisper-web/tree/swedish) but it is identical to the other version at [whisper-web.mesu.re](https://whisper-web.mesu.re).
+Ce dépôt est un fork de [PierreMesure/whisper-web](https://github.com/PierreMesure/whisper-web), qui est lui-même un fork de [Xenova/whisper-web](https://github.com/xenova/whisper-web).
+
+Voici les principales différences :
+
+- Activement maintenu
+- Dépendances à jour, incluant transformers.js
+- Capacité d'utiliser WebGPU ou CPU
+- Interface plus conviviale
+- Interface utilisateur en plusieurs langues
+- Disponible comme application web progressive (utilisable hors ligne si ajoutée à votre écran d'accueil)
+- Transcription rendue en continu et non à la fin
+- Export vers SRT
+- Choix parmi une plus large gamme de modèles (par exemple les modèles suédois et norvégiens affinés par les bibliothèques nationales)
+- Choisissez votre propre niveau de quantification pour le modèle
+- Effacer le cache avec un bouton
+
+L'application principale est disponible sur [whisper-web.pascal-mietlicki.fr](https://whisper-web.pascal-mietlicki.fr/).
 
 ## Running locally
 
 1. Clone the repo and install dependencies:
 
     ```bash
-    git clone https://github.com/PierreMesure/whisper-web.git
+    git clone https://github.com/pmietlicki/whisper-web.git
     cd whisper-web
     npm install
     ```
