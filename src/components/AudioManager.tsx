@@ -39,10 +39,13 @@ export function AudioManager(props: { transcriber: Transcriber }) {
     const [audioDownloadUrl, setAudioDownloadUrl] = useState<
         string | undefined
     >(undefined);
+    const [urlError, setUrlError] = useState<string | undefined>(undefined);
+    const [downloadTrigger, setDownloadTrigger] = useState(0);
 
     const resetAudio = () => {
         setAudioData(undefined);
         setAudioDownloadUrl(undefined);
+        setUrlError(undefined);
     };
 
     const setAudioFromDownload = async (
@@ -95,6 +98,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                 try {
                     setAudioData(undefined);
                     setProgress(0);
+                    setUrlError(undefined); // Effacer toute erreur précédente
                     const { data, headers } = (await axios.get(
                         audioDownloadUrl,
                         {
@@ -114,16 +118,32 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                         mimeType = "audio/wav";
                     }
                     setAudioFromDownload(data, mimeType);
-                } catch (error) {
+                } catch (error: any) {
                     console.log("Request failed or aborted", error);
                     setProgress(undefined);
+                    
+                    // Déterminer le type d'erreur et afficher un message approprié
+                    let errorMessage = t("manager.url_error_generic");
+                    
+                    if (error.code === "ERR_NETWORK" || error.message?.includes("CORS")) {
+                        errorMessage = t("manager.url_error_cors");
+                    } else if (error.response?.status === 404) {
+                        errorMessage = t("manager.url_error_not_found");
+                    } else if (error.response?.status >= 400 && error.response?.status < 500) {
+                        errorMessage = t("manager.url_error_access");
+                    } else if (error.name === "AbortError") {
+                        // Ne pas afficher d'erreur si la requête a été annulée
+                        return;
+                    }
+                    
+                    setUrlError(errorMessage);
                 }
             }
         },
         [audioDownloadUrl],
     );
 
-    // When URL changes, download audio
+    // When URL changes or download is triggered, download audio
     useEffect(() => {
         if (audioDownloadUrl) {
             const requestAbortController = new AbortController();
@@ -132,7 +152,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                 requestAbortController.abort();
             };
         }
-    }, [audioDownloadUrl, downloadAudioFromUrl]);
+    }, [audioDownloadUrl, downloadAudioFromUrl, downloadTrigger]);
 
     return (
         <>
@@ -143,7 +163,9 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                         text={t("manager.from_url")}
                         onUrlUpdate={(e) => {
                             props.transcriber.onInputChange();
+                            setUrlError(undefined); // Effacer l'erreur précédente
                             setAudioDownloadUrl(e);
+                            setDownloadTrigger(prev => prev + 1); // Forcer le téléchargement même avec la même URL
                         }}
                     />
                     <VerticalBar />
@@ -182,6 +204,31 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     }
                 />
             </div>
+
+            {urlError && (
+                <div className='mt-4 p-4 bg-red-50 border border-red-200 rounded-lg'>
+                    <div className='flex items-center'>
+                        <div className='flex-shrink-0'>
+                            <svg className='h-5 w-5 text-red-400' viewBox='0 0 20 20' fill='currentColor'>
+                                <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clipRule='evenodd' />
+                            </svg>
+                        </div>
+                        <div className='ml-3'>
+                            <p className='text-sm text-red-800'>{urlError}</p>
+                        </div>
+                        <div className='ml-auto pl-3'>
+                            <button
+                                onClick={() => setUrlError(undefined)}
+                                className='inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600'
+                            >
+                                <svg className='h-4 w-4' viewBox='0 0 20 20' fill='currentColor'>
+                                    <path fillRule='evenodd' d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z' clipRule='evenodd' />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {audioData && (
                 <>
