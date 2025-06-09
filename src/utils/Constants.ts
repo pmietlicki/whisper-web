@@ -248,5 +248,5 @@ export default {
     getDefaultLanguage,
     DEFAULT_QUANTIZED: isMobileOrTablet,
     DEFAULT_DTYPE: "q4",
-    DEFAULT_GPU: typeof navigator !== "undefined" && !!navigator.gpu,
+    DEFAULT_GPU: typeof navigator !== "undefined" && !!navigator.gpu && !mobileTabletCheck(),
 };
