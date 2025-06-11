@@ -25,7 +25,7 @@ function App() {
 
     return (
         <>
-            <div className='flex flex-col justify-center items-center min-h-screen py-4'>
+            <div className='flex flex-col justify-center items-center min-h-screen py-4 pb-24'>
                 <div className='container flex flex-col justify-center items-center'>
                     <h1 className='text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl text-center'>
                         {t("app.title")}
@@ -63,7 +63,7 @@ function App() {
                 </footer>
             </div>
             <LanguageSelector
-                className='fixed bottom-4 right-16'
+                className='fixed top-4 right-16'
                 currentLanguage={currentLanguage}
                 onChangeLanguage={handleChangeLanguage}
             />

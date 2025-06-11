@@ -263,7 +263,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
             )}
 
             <InfoTile
-                className='fixed bottom-4 right-28'
+                className='fixed top-4 right-28'
                 icon={<InfoIcon />}
                 title={t("manager.info_title")}
                 content={
@@ -347,7 +347,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                 }
             />
             <SettingsTile
-                className='fixed bottom-4 right-4'
+                className='fixed top-4 right-4'
                 transcriber={props.transcriber}
                 icon={<SettingsIcon />}
             />
