@@ -11,7 +11,7 @@ const SHOW_CREDITS = import.meta.env.VITE_SHOW_CREDITS === "true";
 function App() {
     const transcriber = useTranscriber();
 
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation();
     const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
 
     const handleChangeLanguage = (newLanguage: string) => {

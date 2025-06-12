@@ -15,6 +15,11 @@ import Progress from "./Progress";
 import AudioRecorder from "./AudioRecorder";
 import { t } from "i18next";
 import { Trans, useTranslation } from "react-i18next";
+import {
+    FastAudioProcessor,
+    AudioQualityMetrics,
+    detectAudioFormat,
+} from '../utils/FastAudioUtils';
 
 function titleCase(str: string) {
     str = str.toLowerCase();
@@ -33,6 +38,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
               url: string;
               source: AudioSource;
               mimeType: string;
+              metrics?: AudioQualityMetrics;
           }
         | undefined
     >(undefined);
@@ -41,6 +47,9 @@ export function AudioManager(props: { transcriber: Transcriber }) {
     >(undefined);
     const [urlError, setUrlError] = useState<string | undefined>(undefined);
     const [downloadTrigger, setDownloadTrigger] = useState(0);
+    const [audioProcessor] = useState(() => new FastAudioProcessor());
+    const [processingMetrics, setProcessingMetrics] = useState<AudioQualityMetrics | undefined>(undefined);
+    const [isProcessingAudio, setIsProcessingAudio] = useState(false);
 
     const resetAudio = () => {
         setAudioData(undefined);
@@ -52,42 +61,110 @@ export function AudioManager(props: { transcriber: Transcriber }) {
         data: ArrayBuffer,
         mimeType: string,
     ) => {
-        const audioCTX = new AudioContext({
-            sampleRate: Constants.SAMPLING_RATE,
-        });
-        const blobUrl = URL.createObjectURL(
-            new Blob([data], { type: "audio/*" }),
-        );
-        const decoded = await audioCTX.decodeAudioData(data);
-        setAudioData({
-            buffer: decoded,
-            url: blobUrl,
-            source: AudioSource.URL,
-            mimeType: mimeType,
-        });
+        setIsProcessingAudio(true);
+        
+        try {
+            // Detect audio format for better processing
+            const detectedFormat = detectAudioFormat(mimeType);
+            console.log(`Detected audio format: ${detectedFormat}`);
+            
+            const audioCTX = new AudioContext({
+                sampleRate: Constants.SAMPLING_RATE,
+            });
+            const blobUrl = URL.createObjectURL(
+                new Blob([data], { type: "audio/*" }),
+            );
+            const decoded = await audioCTX.decodeAudioData(data);
+            
+            // Apply fast audio processing
+            const { processedBuffer, metrics } = await audioProcessor.processAudioBuffer(decoded);
+            
+            setProcessingMetrics(metrics);
+            setAudioData({
+                buffer: processedBuffer,
+                url: blobUrl,
+                source: AudioSource.URL,
+                mimeType: mimeType,
+                metrics: metrics,
+            });
+            
+            console.log('Audio quality metrics:', metrics);
+        } catch (error) {
+            console.error('Error processing audio:', error);
+            // Fallback to original processing
+            const audioCTX = new AudioContext({
+                sampleRate: Constants.SAMPLING_RATE,
+            });
+            const blobUrl = URL.createObjectURL(
+                new Blob([data], { type: "audio/*" }),
+            );
+            const decoded = await audioCTX.decodeAudioData(data);
+            setAudioData({
+                buffer: decoded,
+                url: blobUrl,
+                source: AudioSource.URL,
+                mimeType: mimeType,
+            });
+        } finally {
+            setIsProcessingAudio(false);
+        }
     };
 
     const setAudioFromRecording = async (data: Blob) => {
         resetAudio();
         setProgress(0);
+        setIsProcessingAudio(true);
+        
         const blobUrl = URL.createObjectURL(data);
         const fileReader = new FileReader();
         fileReader.onprogress = (event) => {
             setProgress(event.loaded / event.total || 0);
         };
         fileReader.onloadend = async () => {
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
-            const arrayBuffer = fileReader.result as ArrayBuffer;
-            const decoded = await audioCTX.decodeAudioData(arrayBuffer);
-            setProgress(undefined);
-            setAudioData({
-                buffer: decoded,
-                url: blobUrl,
-                source: AudioSource.RECORDING,
-                mimeType: data.type,
-            });
+            try {
+                const arrayBuffer = fileReader.result as ArrayBuffer;
+                
+                // Detect audio format
+                const detectedFormat = detectAudioFormat(data.type);
+                console.log(`Detected recording format: ${detectedFormat}`);
+                
+                const audioCTX = new AudioContext({
+                    sampleRate: Constants.SAMPLING_RATE,
+                });
+                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                
+                // Apply optimized audio processing
+                const { processedBuffer, metrics } = await audioProcessor.processAudioBuffer(decoded);
+                
+                setProgress(undefined);
+                setProcessingMetrics(metrics);
+                setAudioData({
+                    buffer: processedBuffer,
+                    url: blobUrl,
+                    source: AudioSource.RECORDING,
+                    mimeType: data.type,
+                    metrics: metrics,
+                });
+                
+                console.log('Recording quality metrics:', metrics);
+            } catch (error) {
+                console.error('Error processing recording:', error);
+                // Fallback to original processing
+                const audioCTX = new AudioContext({
+                    sampleRate: Constants.SAMPLING_RATE,
+                });
+                const arrayBuffer = fileReader.result as ArrayBuffer;
+                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                setProgress(undefined);
+                setAudioData({
+                    buffer: decoded,
+                    url: blobUrl,
+                    source: AudioSource.RECORDING,
+                    mimeType: data.type,
+                });
+            } finally {
+                setIsProcessingAudio(false);
+            }
         };
         fileReader.readAsArrayBuffer(data);
     };
@@ -172,13 +249,15 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     <FileTile
                         icon={<FolderIcon />}
                         text={t("manager.from_file")}
-                        onFileUpdate={(decoded, blobUrl, mimeType) => {
+                        onFileUpdate={(decoded, blobUrl, mimeType, metrics) => {
                             props.transcriber.onInputChange();
+                            setProcessingMetrics(metrics);
                             setAudioData({
                                 buffer: decoded,
                                 url: blobUrl,
                                 source: AudioSource.FILE,
                                 mimeType: mimeType,
+                                metrics: metrics,
                             });
                         }}
                     />
@@ -203,6 +282,29 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                             : (progress ?? 0)
                     }
                 />
+                
+                {/* Audio Processing Status */}
+                {isProcessingAudio && (
+                    <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700'>
+                        <div className='flex items-center'>
+                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2'></div>
+                            {t("manager.processing_audio")}
+                        </div>
+                    </div>
+                )}
+                
+                {/* Audio Quality Metrics */}
+                {processingMetrics && audioData && (
+                    <div className='mt-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm'>
+                        <div className='font-medium text-green-800 mb-2'>{t("manager.audio_quality")}</div>
+                        <div className='grid grid-cols-2 gap-2 text-green-700'>
+                            <div>SNR: {processingMetrics.snr.toFixed(1)} dB</div>
+                            <div>RMS: {(processingMetrics.rms * 100).toFixed(1)}%</div>
+                            <div>Peak: {(processingMetrics.peak * 100).toFixed(1)}%</div>
+                            <div>Duration: {processingMetrics.duration.toFixed(1)}s</div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {urlError && (
@@ -240,7 +342,7 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     <div className='relative w-full flex justify-center items-center'>
                         <TranscribeButton
                             onClick={() => {
-                                props.transcriber.start(audioData.buffer);
+                                props.transcriber.start(audioData.buffer, audioData.metrics);
                             }}
                             isModelLoading={props.transcriber.isModelLoading}
                             isTranscribing={props.transcriber.isBusy}
@@ -682,12 +784,14 @@ function FileTile(props: {
         decoded: AudioBuffer,
         blobUrl: string,
         mimeType: string,
+        metrics?: AudioQualityMetrics,
     ) => void;
 }) {
     // Create hidden input element
     const elem = document.createElement("input");
     elem.type = "file";
-    elem.oninput = (event) => {
+    elem.accept = "audio/*,video/*";
+    elem.oninput = async (event) => {
         // Make sure we have files to use
         const files = (event.target as HTMLInputElement).files;
         if (!files) return;
@@ -698,16 +802,35 @@ function FileTile(props: {
 
         const reader = new FileReader();
         reader.addEventListener("load", async (e) => {
-            const arrayBuffer = e.target?.result as ArrayBuffer; // Get the ArrayBuffer
+            const arrayBuffer = e.target?.result as ArrayBuffer;
             if (!arrayBuffer) return;
 
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
+            try {
+                // Detect audio format
+                const detectedFormat = detectAudioFormat(mimeType);
+                console.log(`Detected file format: ${detectedFormat}`);
 
-            const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                const audioCTX = new AudioContext({
+                    sampleRate: Constants.SAMPLING_RATE,
+                });
 
-            props.onFileUpdate(decoded, urlObj, mimeType);
+                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                
+                // Apply fast audio processing
+                const processor = new FastAudioProcessor();
+                const { processedBuffer, metrics } = await processor.processAudioBuffer(decoded);
+                
+                console.log('File quality metrics:', metrics);
+                props.onFileUpdate(processedBuffer, urlObj, mimeType, metrics);
+            } catch (error) {
+                console.error('Error processing file:', error);
+                // Fallback to original processing
+                const audioCTX = new AudioContext({
+                    sampleRate: Constants.SAMPLING_RATE,
+                });
+                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                props.onFileUpdate(decoded, urlObj, mimeType);
+            }
         });
         reader.readAsArrayBuffer(files[0]);
 

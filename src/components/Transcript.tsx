@@ -1,5 +1,4 @@
 import { useRef, useEffect } from "react";
-
 import { TranscriberData } from "../hooks/useTranscriber";
 import { formatAudioTimestamp, formatSrtTimeRange } from "../utils/AudioUtils";
 import { t } from "i18next";
@@ -65,24 +64,33 @@ export default function Transcript({ transcribedData }: Props) {
     }, [transcribedData?.chunks]);
 
     return (
-        <div
-            ref={divRef}
-            className='w-full flex flex-col mt-2 p-4 overflow-y-auto'
-        >
-            {transcribedData?.chunks &&
-                transcribedData.chunks.map((chunk, i) => (
-                    <div
-                        key={`${i}-${chunk.text}`}
-                        className={`w-full flex flex-row mb-2 ${transcribedData?.isBusy ? "bg-gray-100" : "bg-white"} rounded-lg p-4 shadow-xl shadow-black/5 ring-1 ring-slate-700/10`}
-                    >
-                        <div className='mr-5'>
-                            {formatAudioTimestamp(chunk.timestamp[0])}
+        <div className='w-full flex flex-col mt-2'>
+            {/* Conteneur de transcription avec défilement - masqué si pas de chunks */}
+            {transcribedData?.chunks && transcribedData.chunks.length > 0 && (
+                <div
+                    ref={divRef}
+                    className='w-full max-h-[300px] overflow-y-auto scrollbar-thin border border-gray-200 rounded-lg p-4 bg-gray-50'
+                >
+                    {transcribedData.chunks.map((chunk, i) => (
+                        <div
+                            key={`${i}-${chunk.text}`}
+                            className={`w-full flex flex-row mb-2 ${transcribedData?.isBusy ? "bg-gray-100" : "bg-white"} rounded-lg p-3 shadow-sm border border-gray-100`}
+                        >
+                            <div className='mr-4 text-xs text-gray-500 font-mono min-w-[60px]'>
+                                {formatAudioTimestamp(chunk.timestamp[0])}
+                            </div>
+                            <div className='text-gray-800 leading-relaxed'>
+                                {chunk.text}
+                            </div>
                         </div>
-                        {chunk.text}
-                    </div>
-                ))}
+                    ))}
+                    <div ref={endOfMessagesRef} />
+                </div>
+            )}
+            
+            {/* Boutons d'export */}
             {transcribedData && !transcribedData.isBusy && (
-                <div className='w-full text-center'>
+                <div className='w-full text-center mt-4'>
                     {exportButtons.map((button, i) => (
                         <button
                             key={i}
@@ -94,6 +102,8 @@ export default function Transcript({ transcribedData }: Props) {
                     ))}
                 </div>
             )}
+            
+            {/* Statistiques */}
             {transcribedData?.tps && (
                 <p className='text-sm text-center mt-4'>
                     <span className='font-semibold text-black'>
@@ -104,7 +114,6 @@ export default function Transcript({ transcribedData }: Props) {
                     </span>
                 </p>
             )}
-            <div ref={endOfMessagesRef} />
         </div>
     );
 }

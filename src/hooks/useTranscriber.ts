@@ -25,6 +25,14 @@ export interface TranscriberData {
     tps?: number;
     text: string;
     chunks: { text: string; timestamp: [number, number | null] }[];
+    audioMetrics?: {
+        snr: number;
+        rms: number;
+        peak: number;
+        duration: number;
+        sampleRate: number;
+        channels: number;
+    };
 }
 
 export interface Transcriber {
@@ -32,7 +40,14 @@ export interface Transcriber {
     isBusy: boolean;
     isModelLoading: boolean;
     progressItems: ProgressItem[];
-    start: (audioData: AudioBuffer | undefined) => void;
+    start: (audioData: AudioBuffer | undefined, audioMetrics?: {
+        snr: number;
+        rms: number;
+        peak: number;
+        duration: number;
+        sampleRate: number;
+        channels: number;
+    }) => void;
     output?: TranscriberData;
     model: string;
     setModel: (model: string) => void;
@@ -133,7 +148,14 @@ export function useTranscriber(): Transcriber {
     }, []);
 
     const postRequest = useCallback(
-        async (audioData: AudioBuffer | undefined) => {
+        async (audioData: AudioBuffer | undefined, audioMetrics?: {
+            snr: number;
+            rms: number;
+            peak: number;
+            duration: number;
+            sampleRate: number;
+            channels: number;
+        }) => {
             if (audioData) {
                 setTranscript(undefined);
                 setIsBusy(true);
@@ -154,6 +176,11 @@ export function useTranscriber(): Transcriber {
                     audio = audioData.getChannelData(0);
                 }
 
+                // Log audio metrics for debugging
+                if (audioMetrics) {
+                    console.log('Starting transcription with audio metrics:', audioMetrics);
+                }
+
                 webWorker.postMessage({
                     audio,
                     model,
@@ -164,6 +191,7 @@ export function useTranscriber(): Transcriber {
                         !model.endsWith(".en") && language !== "auto"
                             ? language
                             : null,
+                    audioMetrics, // Pass metrics to worker
                 });
             }
         },
