@@ -1,4 +1,3 @@
-import { t } from "i18next";
 import { AudioManager } from "./components/AudioManager";
 import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
