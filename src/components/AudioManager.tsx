@@ -30,7 +30,14 @@ function titleCase(str: string) {
         .join("");
 }
 
-export function AudioManager(props: { transcriber: Transcriber }) {
+interface AudioManagerProps {
+    transcriber: Transcriber;
+    onTimeUpdate?: (currentTime: number) => void;
+    currentTime?: number;
+    onSeek?: (time: number) => void;
+}
+
+export default function AudioManager(props: AudioManagerProps) {
     const [progress, setProgress] = useState<number | undefined>(0);
     const [audioData, setAudioData] = useState<
         | {
@@ -337,6 +344,9 @@ export function AudioManager(props: { transcriber: Transcriber }) {
                     <AudioPlayer
                         audioUrl={audioData.url}
                         mimeType={audioData.mimeType}
+                        onTimeUpdate={props.onTimeUpdate}
+                        currentTime={props.currentTime}
+                        onSeek={props.onSeek}
                     />
 
                     <div className='relative w-full flex justify-center items-center'>

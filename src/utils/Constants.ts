@@ -135,6 +135,11 @@ export const MODELS: { [key: string]: [string, string] } = {
     "onnx-community/whisper-medium-ONNX": ["medium", ""],
     "onnx-community/whisper-large-v3-turbo": ["large-v3-turbo", ""],
     "onnx-community/distil-small.en": ["distil-small.en", "en"],
+    // Timestamped models for audio synchronization
+    "onnx-community/whisper-tiny_timestamped": ["tiny-timestamped", ""],
+    "onnx-community/whisper-base_timestamped": ["base-timestamped", ""],
+    "onnx-community/whisper-small_timestamped": ["small-timestamped", ""],
+    "onnx-community/whisper-tiny.en_timestamped": ["tiny.en-timestamped", "en"],
     // French-optimized models
     "onnx-community/whisper-small-cv11-french-ONNX": ["whisper-small-cv11-french", "fr"],
     // Swedish models
@@ -219,10 +224,12 @@ function getDefaultModel(language: string): string {
             return `PierreMesure/whisper-${
                 isMobileOrTablet ? "tiny" : "small"
             }-faroese-8k-steps-100h-ONNX`;
+        case "en":
+            return isMobileOrTablet ? `onnx-community/whisper-base.en_timestamped` : `onnx-community/whisper-small.en_timestamped`;
         default:
             return `onnx-community/whisper-${
-                isMobileOrTablet ? "tiny" : "small"
-            }`;
+                isMobileOrTablet ? "tiny" : "base"
+            }_timestamped`;
     }
 }
 

@@ -1,22 +1,99 @@
-import { useEffect, useRef } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from "react";
 
-export default function AudioPlayer(props: {
+interface AudioPlayerProps {
     audioUrl: string;
     mimeType: string;
-}) {
+    onTimeUpdate?: (currentTime: number) => void;
+    onSeek?: (time: number) => void;
+    currentTime?: number;
+}
+
+export default function AudioPlayer({
+    audioUrl,
+    mimeType,
+    onTimeUpdate,
+    onSeek,
+    currentTime
+}: AudioPlayerProps) {
     const mediaPlayer = useRef<HTMLAudioElement | HTMLVideoElement>(null);
     const mediaSource = useRef<HTMLSourceElement>(null);
+    const [duration, setDuration] = useState<number>(0);
+    const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    const [volume, setVolume] = useState<number>(1);
     
     // Détermine si c'est une vidéo
-    const isVideo = props.mimeType.startsWith('video/');
+    const isVideo = mimeType.startsWith('video/');
+
+    // Handle time updates
+    const handleTimeUpdate = useCallback(() => {
+        if (mediaPlayer.current && onTimeUpdate) {
+            onTimeUpdate(mediaPlayer.current.currentTime);
+        }
+    }, [onTimeUpdate]);
+
+    // Handle seeking
+    const handleSeek = useCallback((time: number) => {
+        if (mediaPlayer.current) {
+            mediaPlayer.current.currentTime = time;
+            if (onSeek) {
+                onSeek(time);
+            }
+        }
+    }, [onSeek]);
+
+    // Handle external seek requests
+    useEffect(() => {
+        if (mediaPlayer.current && currentTime !== undefined) {
+            const timeDiff = Math.abs(mediaPlayer.current.currentTime - currentTime);
+            // Only seek if the difference is significant (more than 0.5 seconds)
+            if (timeDiff > 0.5) {
+                mediaPlayer.current.currentTime = currentTime;
+            }
+        }
+    }, [currentTime]);
 
     // Updates src when url changes
     useEffect(() => {
         if (mediaPlayer.current && mediaSource.current) {
-            mediaSource.current.src = props.audioUrl;
+            mediaSource.current.src = audioUrl;
             mediaPlayer.current.load();
         }
-    }, [props.audioUrl]);
+    }, [audioUrl]);
+
+    // Setup event listeners
+    useEffect(() => {
+        const player = mediaPlayer.current;
+        if (!player) return;
+
+        const handleLoadedMetadata = () => {
+            setDuration(player.duration);
+        };
+
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+        const handleVolumeChange = () => setVolume(player.volume);
+
+        player.addEventListener('loadedmetadata', handleLoadedMetadata);
+        player.addEventListener('timeupdate', handleTimeUpdate);
+        player.addEventListener('play', handlePlay);
+        player.addEventListener('pause', handlePause);
+        player.addEventListener('volumechange', handleVolumeChange);
+
+        return () => {
+            player.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            player.removeEventListener('timeupdate', handleTimeUpdate);
+            player.removeEventListener('play', handlePlay);
+            player.removeEventListener('pause', handlePause);
+            player.removeEventListener('volumechange', handleVolumeChange);
+        };
+    }, [handleTimeUpdate]);
+
+    // Expose seek function
+    useEffect(() => {
+        if (mediaPlayer.current) {
+            (mediaPlayer.current as any).seekTo = handleSeek;
+        }
+    }, [handleSeek]);
 
     return (
         <div className='sticky bottom-0 w-full p-4 bg-white border-t border-slate-200 shadow-lg z-50 mt-8'>
@@ -27,7 +104,7 @@ export default function AudioPlayer(props: {
                         controls
                         className='w-full max-h-96 rounded-lg bg-black shadow-xl shadow-black/5 ring-1 ring-slate-700/10'
                     >
-                        <source ref={mediaSource} type={props.mimeType}></source>
+                        <source ref={mediaSource} type={mimeType}></source>
                     </video>
                 ) : (
                     <audio
@@ -35,7 +112,7 @@ export default function AudioPlayer(props: {
                         controls
                         className='w-full h-14 rounded-lg bg-white shadow-xl shadow-black/5 ring-1 ring-slate-700/10'
                     >
-                        <source ref={mediaSource} type={props.mimeType}></source>
+                        <source ref={mediaSource} type={mimeType}></source>
                     </audio>
                 )}
             </div>

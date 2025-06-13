@@ -12,11 +12,26 @@ interface ProgressItem {
     status: string;
 }
 
+interface SpeakerSegment {
+    speaker: string;
+    start: number;
+    end: number;
+}
+
+interface TranscriberChunk {
+    text: string;
+    timestamp: [number, number | null];
+    speaker?: string;
+    confidence?: number;
+}
+
 interface TranscriberUpdateData {
     data: {
         text: string;
-        chunks: { text: string; timestamp: [number, number | null] }[];
+        chunks: TranscriberChunk[];
         tps: number;
+        speakerSegments?: SpeakerSegment[];
+        currentTime?: number;
     };
 }
 
@@ -24,7 +39,9 @@ export interface TranscriberData {
     isBusy: boolean;
     tps?: number;
     text: string;
-    chunks: { text: string; timestamp: [number, number | null] }[];
+    chunks: TranscriberChunk[];
+    speakerSegments?: SpeakerSegment[];
+    currentTime?: number;
     audioMetrics?: {
         snr: number;
         rms: number;
@@ -94,6 +111,8 @@ export function useTranscriber(): Transcriber {
                     text: updateMessage.data.text,
                     tps: updateMessage.data.tps,
                     chunks: updateMessage.data.chunks,
+                    speakerSegments: updateMessage.data.speakerSegments,
+                    currentTime: updateMessage.data.currentTime,
                 });
                 setIsBusy(busy);
                 break;

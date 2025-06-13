@@ -1,4 +1,140 @@
-import { pipeline, WhisperTextStreamer } from '@huggingface/transformers';
+import { pipeline, env } from "@huggingface/transformers";
+import { MessageTypes } from "./utils/MessageTypes";
+import { WhisperTextStreamer } from "./utils/WhisperTextStreamer";
+
+// Speaker diarization model
+class SpeakerDiarizationPipeline {
+    static task = 'feature-extraction';
+    static model = 'Xenova/wavlm-base-plus-sv';
+    static instance = null;
+
+    static async getInstance(progress_callback = null) {
+        if (this.instance === null) {
+            this.instance = pipeline(this.task, this.model, { progress_callback });
+        }
+        return this.instance;
+    }
+}
+
+// Speaker diarization utilities
+function cosine_similarity(a, b) {
+    let dot_product = 0;
+    let norm_a = 0;
+    let norm_b = 0;
+    for (let i = 0; i < a.length; i++) {
+        dot_product += a[i] * b[i];
+        norm_a += a[i] * a[i];
+        norm_b += b[i] * b[i];
+    }
+    return dot_product / (Math.sqrt(norm_a) * Math.sqrt(norm_b));
+}
+
+function cluster_speakers(embeddings, threshold = 0.7) {
+    const clusters = [];
+    const assignments = new Array(embeddings.length).fill(-1);
+    
+    for (let i = 0; i < embeddings.length; i++) {
+        if (assignments[i] !== -1) continue;
+        
+        const cluster = [i];
+        assignments[i] = clusters.length;
+        
+        for (let j = i + 1; j < embeddings.length; j++) {
+            if (assignments[j] !== -1) continue;
+            
+            const similarity = cosine_similarity(embeddings[i], embeddings[j]);
+            if (similarity > threshold) {
+                cluster.push(j);
+                assignments[j] = clusters.length;
+            }
+        }
+        
+        clusters.push(cluster);
+    }
+    
+    return assignments;
+}
+
+async function performSpeakerDiarization(audio, chunks) {
+    try {
+        const diarizer = await SpeakerDiarizationPipeline.getInstance();
+        
+        // Extract embeddings for each chunk
+        const embeddings = [];
+        const validChunks = [];
+        
+        for (const chunk of chunks) {
+            if (chunk.timestamp[0] !== null && chunk.timestamp[1] !== null) {
+                const start_sample = Math.floor(chunk.timestamp[0] * 16000);
+                const end_sample = Math.floor(chunk.timestamp[1] * 16000);
+                
+                if (start_sample < audio.length && end_sample <= audio.length && end_sample > start_sample) {
+                    const chunk_audio = audio.slice(start_sample, end_sample);
+                    
+                    if (chunk_audio.length > 1600) { // At least 0.1 seconds
+                        const { data } = await diarizer(chunk_audio);
+                        embeddings.push(Array.from(data));
+                        validChunks.push(chunk);
+                    }
+                }
+            }
+        }
+        
+        if (embeddings.length === 0) {
+            return { chunks, speakerSegments: [] };
+        }
+        
+        // Cluster speakers
+        const speaker_assignments = cluster_speakers(embeddings);
+        
+        // Assign speakers to chunks
+        const chunksWithSpeakers = chunks.map(chunk => ({ ...chunk }));
+        for (let i = 0; i < validChunks.length; i++) {
+            const chunkIndex = chunks.indexOf(validChunks[i]);
+            if (chunkIndex !== -1) {
+                chunksWithSpeakers[chunkIndex].speaker = `Speaker ${speaker_assignments[i] + 1}`;
+            }
+        }
+        
+        // Create speaker segments
+        const speakerSegments = [];
+        let currentSpeaker = null;
+        let segmentStart = null;
+        
+        for (const chunk of chunksWithSpeakers) {
+            if (chunk.speaker && chunk.timestamp[0] !== null) {
+                if (currentSpeaker !== chunk.speaker) {
+                    if (currentSpeaker !== null && segmentStart !== null) {
+                        speakerSegments.push({
+                            speaker: currentSpeaker,
+                            start: segmentStart,
+                            end: chunk.timestamp[0]
+                        });
+                    }
+                    currentSpeaker = chunk.speaker;
+                    segmentStart = chunk.timestamp[0];
+                }
+            }
+        }
+        
+        // Add final segment
+        if (currentSpeaker !== null && segmentStart !== null) {
+            const lastChunk = chunksWithSpeakers[chunksWithSpeakers.length - 1];
+            if (lastChunk && lastChunk.timestamp[1] !== null) {
+                speakerSegments.push({
+                    speaker: currentSpeaker,
+                    start: segmentStart,
+                    end: lastChunk.timestamp[1]
+                });
+            }
+        }
+        
+        return { chunks: chunksWithSpeakers, speakerSegments };
+    } catch (error) {
+        console.warn('Speaker diarization failed:', error);
+        return { chunks, speakerSegments: [] };
+    }
+}
 
 // Configuration explicite et robuste des chemins WASM
 if (typeof window === 'undefined') {
@@ -13,6 +149,9 @@ if (typeof window === 'undefined') {
             // Configuration additionnelle pour éviter les erreurs d'initialisation
             env.backends.onnx.wasm.proxy = false;
             env.allowLocalModels = false;
+            env.allowRemoteModels = true;
+            env.useBrowserCache = true;
+            env.useCustomCache = false;
             
             console.log('WASM configuration applied successfully');
         } catch (configError) {
@@ -423,7 +562,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
     // let decoded_chunks = [];
 
     const chunk_length_s = isDistilWhisper ? 20 : 30;
-    const stride_length_s = isDistilWhisper ? 3 : 5;
+    const stride_length_s = 0;
 
     let chunk_count = 0;
     let start_time;
@@ -472,6 +611,9 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         },
     });
 
+    // Check if this is an English-only model
+    const isEnglishOnly = model.includes('.en');
+    
     // Options for the transcription call
     const params = {
         // Greedy
@@ -482,10 +624,6 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         chunk_length_s,
         stride_length_s,
 
-        // Language and task
-        language,
-        task: subtask,
-
         // Return timestamps
         return_timestamps: true,
         force_full_sequences: false,
@@ -493,6 +631,12 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         // Callback functions
         streamer, // after each generation step
     };
+    
+    // Only add language and task for multilingual models
+    if (!isEnglishOnly) {
+        params.language = language;
+        params.task = subtask;
+    }
 
     let output;
     try {
@@ -528,8 +672,43 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         }
     }
 
+    // Perform speaker diarization on the final chunks
+    let finalChunks = chunks;
+    let speakerSegments = [];
+    
+    try {
+        const diarizationResult = await performSpeakerDiarization(audio, chunks);
+        finalChunks = diarizationResult.chunks;
+        speakerSegments = diarizationResult.speakerSegments;
+        
+        // Send final update with speaker information
+        self.postMessage({
+            status: "complete",
+            data: {
+                text: finalChunks.map(chunk => chunk.text).join("").trim(),
+                chunks: finalChunks,
+                tps,
+                speakerSegments,
+            },
+        });
+    } catch (error) {
+        console.warn('Speaker diarization failed, proceeding without it:', error);
+        // Send final update without speaker information
+        self.postMessage({
+            status: "complete",
+            data: {
+                text: finalChunks.map(chunk => chunk.text).join("").trim(),
+                chunks: finalChunks,
+                tps,
+                speakerSegments: [],
+            },
+        });
+    }
+
     return {
         tps,
+        chunks: finalChunks,
+        speakerSegments,
         ...output,
     };
 };

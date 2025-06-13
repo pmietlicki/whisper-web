@@ -1,14 +1,17 @@
-import { AudioManager } from "./components/AudioManager";
+import AudioManager from "./components/AudioManager";
+import AudioPlayer from "./components/AudioPlayer";
 import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
 import { Trans, useTranslation } from "react-i18next";
 import LanguageSelector from "./components/LanguageSelector";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const SHOW_CREDITS = import.meta.env.VITE_SHOW_CREDITS === "true";
 
 function App() {
     const transcriber = useTranscriber();
+    const [currentTime, setCurrentTime] = useState<number>(0);
+    const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
 
     const { i18n, t } = useTranslation();
     const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
@@ -17,6 +20,17 @@ function App() {
         setCurrentLanguage(newLanguage);
         i18n.changeLanguage(newLanguage);
     };
+
+    const handleTimeUpdate = useCallback((time: number) => {
+        setCurrentTime(time);
+    }, []);
+
+    const handleSeek = useCallback((time: number) => {
+        setSeekTime(time);
+        setCurrentTime(time);
+        // Reset seekTime after a short delay to avoid continuous seeking
+        setTimeout(() => setSeekTime(undefined), 100);
+    }, []);
 
     useEffect(() => {
         setCurrentLanguage(i18n.language);
@@ -32,8 +46,17 @@ function App() {
                     <h2 className='mt-3 mb-5 px-4 text-center text-1xl font-semibold tracking-tight text-slate-900 sm:text-2xl'>
                         {t("app.subtitle")}
                     </h2>
-                    <AudioManager transcriber={transcriber} />
-                    <Transcript transcribedData={transcriber.output} />
+                    <AudioManager 
+                        transcriber={transcriber}
+                        onTimeUpdate={handleTimeUpdate}
+                        currentTime={seekTime}
+                        onSeek={handleSeek}
+                    />
+                    <Transcript 
+                        transcribedData={transcriber.output} 
+                        currentTime={currentTime}
+                        onSeek={handleSeek}
+                    />
                 </div>
 
 
