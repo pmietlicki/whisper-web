@@ -419,8 +419,38 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
     /** @type {{ text: string; offset: number, timestamp: [number, number | null] }[]} */
     const chunks = [];
 
-    // TODO: Storage for fully-processed and merged chunks
-    // let decoded_chunks = [];
+    // Storage for fully-processed and merged chunks
+        /** @type {{ text: string; timestamp: [number, number | null] }}[] */
+        const decoded_chunks = [];
+
+        const getMergedChunks = () => decoded_chunks.concat(chunks);
+    
+        const findOverlap = (a, b) => {
+            const max = Math.min(a.length, b.length);
+            for (let i = max; i > 0; --i) {
+                if (a.slice(-i) === b.slice(0, i)) {
+                    return i;
+                }
+            }
+            return 0;
+        };
+    
+        const mergeChunk = (chunk) => {
+            if (decoded_chunks.length === 0) {
+                decoded_chunks.push({ ...chunk });
+                return;
+            }
+            const last = decoded_chunks[decoded_chunks.length - 1];
+            const overlap = findOverlap(last.text.trim(), chunk.text.trim());
+            if (overlap > 0) {
+                chunk.text = chunk.text.slice(overlap);
+            }
+            if (chunk.text.trim().length === 0) {
+                last.timestamp[1] = chunk.timestamp[1];
+            } else {
+                decoded_chunks.push({ ...chunk });
+            }
+        };
 
     const chunk_length_s = isDistilWhisper ? 20 : 30;
     const stride_length_s = isDistilWhisper ? 3 : 5;
@@ -455,15 +485,26 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
                 status: "update",
                 data: {
                     text: "", // No need to send full text yet
-                    chunks,
+                    chunks: getMergedChunks(),
                     tps,
                 },
             });
         },
         on_chunk_end: (x) => {
-            const current = chunks.at(-1);
+            const current = chunks.pop();
+            if (!current) return;
             current.timestamp[1] = x + current.offset;
             current.finalised = true;
+            mergeChunk(current);
+
+            self.postMessage({
+                status: "update",
+                data: {
+                    text: "", // still incremental
+                    chunks: getMergedChunks(),
+                    tps,
+                },
+            });
         },
         on_finalize: () => {
             start_time = null;
@@ -494,10 +535,9 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         streamer, // after each generation step
     };
 
-    let output;
     try {
         // Actually run transcription
-        output = await transcriber(audio, params);
+        await transcriber(audio, params);
     } catch (error) {
         console.error(error);
         if (gpu) {
@@ -510,7 +550,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
             p.gpu = false;
             try {
                 const cpuTranscriber = await p.getInstance(null); // Pas de progress_callback pour le fallback
-                output = await cpuTranscriber(audio, params);
+                await cpuTranscriber(audio, params);
             } catch (error2) {
                 console.error(error2);
                 self.postMessage({
@@ -530,6 +570,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
 
     return {
         tps,
-        ...output,
+        text: decoded_chunks.map((c) => c.text).join(""),
+        chunks: decoded_chunks,
     };
 };
