@@ -48,7 +48,13 @@
         },
         "transcript": {
             "export": "Exporter",
-            "tokens_per_second": "tokens/seconde"
+            "tokens_per_second": "tokens/seconde",
+            "view_mode": "Mode d'affichage",
+            "chunks_view": "Vue par segments",
+            "speakers_view": "Vue par locuteurs",
+            "auto_scroll": "Défilement automatique",
+            "speakers_detected": "{{count}} locuteurs détectés",
+            "unknown_speaker": "Locuteur inconnu"
         },
         "language_selector": {
             "title": "Langue",

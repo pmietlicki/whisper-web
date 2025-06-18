@@ -35,7 +35,7 @@ export default function Transcript({ transcribedData, currentTime, onSeek }: Pro
         let currentGroup: SpeakerGroup | null = null;
         
         for (const chunk of transcribedData.chunks) {
-            const speaker = chunk.speaker || 'Unknown Speaker';
+            const speaker = chunk.speaker || t('transcript.unknown_speaker');
             
             if (!currentGroup || currentGroup.speaker !== speaker) {
                 if (currentGroup) {

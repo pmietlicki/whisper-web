@@ -46,7 +46,13 @@
         },
         "transcript": {
             "export": "Eksporter",
-            "tokens_per_second": "tokens/sekund"
+            "tokens_per_second": "tokens/sekund",
+            "view_mode": "Visningsmodus",
+            "chunks_view": "Segmentvisning",
+            "speakers_view": "Talevisning",
+            "auto_scroll": "Automatisk rulling",
+            "speakers_detected": "{{count}} talere oppdaget",
+            "unknown_speaker": "Ukjent taler"
         },
         "language_selector": {
             "title": "Språk",

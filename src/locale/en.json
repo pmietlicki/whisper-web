@@ -48,7 +48,13 @@
         },
         "transcript": {
             "export": "Export",
-            "tokens_per_second": "tokens/second"
+            "tokens_per_second": "tokens/second",
+            "view_mode": "View mode",
+            "chunks_view": "Chunks view",
+            "speakers_view": "Speakers view",
+            "auto_scroll": "Auto scroll",
+            "speakers_detected": "{{count}} speakers detected",
+            "unknown_speaker": "Unknown speaker"
         },
         "language_selector": {
             "title": "Language",
