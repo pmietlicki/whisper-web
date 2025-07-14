@@ -1,5 +1,4 @@
 import AudioManager from "./components/AudioManager";
-import AudioPlayer from "./components/AudioPlayer";
 import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
 import { Trans, useTranslation } from "react-i18next";

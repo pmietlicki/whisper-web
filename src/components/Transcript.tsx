@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { TranscriberData } from "../hooks/useTranscriber";
 import { formatAudioTimestamp, formatSrtTimeRange } from "../utils/AudioUtils";
 import { t } from "i18next";

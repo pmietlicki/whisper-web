@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 
 interface AudioPlayerProps {
     audioUrl: string;
@@ -17,10 +17,6 @@ export default function AudioPlayer({
 }: AudioPlayerProps) {
     const mediaPlayer = useRef<HTMLAudioElement | HTMLVideoElement>(null);
     const mediaSource = useRef<HTMLSourceElement>(null);
-    const [duration, setDuration] = useState<number>(0);
-    const [isPlaying, setIsPlaying] = useState<boolean>(false);
-    const [volume, setVolume] = useState<number>(1);
-    
     // Détermine si c'est une vidéo
     const isVideo = mimeType.startsWith('video/');
 
@@ -65,26 +61,10 @@ export default function AudioPlayer({
         const player = mediaPlayer.current;
         if (!player) return;
 
-        const handleLoadedMetadata = () => {
-            setDuration(player.duration);
-        };
-
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
-        const handleVolumeChange = () => setVolume(player.volume);
-
-        player.addEventListener('loadedmetadata', handleLoadedMetadata);
         player.addEventListener('timeupdate', handleTimeUpdate);
-        player.addEventListener('play', handlePlay);
-        player.addEventListener('pause', handlePause);
-        player.addEventListener('volumechange', handleVolumeChange);
 
         return () => {
-            player.removeEventListener('loadedmetadata', handleLoadedMetadata);
             player.removeEventListener('timeupdate', handleTimeUpdate);
-            player.removeEventListener('play', handlePlay);
-            player.removeEventListener('pause', handlePause);
-            player.removeEventListener('volumechange', handleVolumeChange);
         };
     }, [handleTimeUpdate]);
 
