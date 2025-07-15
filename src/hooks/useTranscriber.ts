@@ -13,9 +13,11 @@ interface ProgressItem {
 }
 
 interface SpeakerSegment {
-    speaker: string;
+    label: string;
     start: number;
     end: number;
+    id?: number;
+    confidence?: number;
 }
 
 interface TranscriberChunk {
@@ -210,7 +212,8 @@ export function useTranscriber(): Transcriber {
                         !model.endsWith(".en") && language !== "auto"
                             ? language
                             : null,
-                    audioMetrics, // Pass metrics to worker
+                    audioMetrics,
+                    token: import.meta.env.VITE_HF_TOKEN
                 });
             }
         },

@@ -3,7 +3,11 @@ import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
 import { Trans, useTranslation } from "react-i18next";
 import LanguageSelector from "./components/LanguageSelector";
-import { useEffect, useState, useCallback } from "react";
+// 1. Importer `useMemo`
+import { useEffect, useState, useCallback, useMemo } from "react";
+
+// 2. Importer la fonction de nettoyage
+import { cleanDiarization } from "./utils/DiarizationUtils"; 
 
 const SHOW_CREDITS = import.meta.env.VITE_SHOW_CREDITS === "true";
 
@@ -27,13 +31,26 @@ function App() {
     const handleSeek = useCallback((time: number) => {
         setSeekTime(time);
         setCurrentTime(time);
-        // Reset seekTime after a short delay to avoid continuous seeking
         setTimeout(() => setSeekTime(undefined), 100);
     }, []);
 
     useEffect(() => {
         setCurrentLanguage(i18n.language);
     }, [i18n.language]);
+
+    const cleanedTranscribedData = useMemo(() => {
+        if (!transcriber.output) {
+            return undefined;
+        }
+
+        const rawSegments = transcriber.output.speakerSegments || [];
+        const cleanedSegments = cleanDiarization(rawSegments); 
+
+        return {
+            ...transcriber.output,
+            speakerSegments: cleanedSegments,
+        };
+    }, [transcriber.output]);
 
     return (
         <>
@@ -52,7 +69,8 @@ function App() {
                         onSeek={handleSeek}
                     />
                     <Transcript 
-                        transcribedData={transcriber.output} 
+                        // 3. Utiliser les données nettoyées ici
+                        transcribedData={cleanedTranscribedData} 
                         currentTime={currentTime}
                         onSeek={handleSeek}
                     />

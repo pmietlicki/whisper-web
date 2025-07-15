@@ -1,20 +1,34 @@
-import { pipeline, env } from "@huggingface/transformers";
-import { MessageTypes } from "./utils/MessageTypes";
+import { pipeline, env, AutoProcessor, AutoModelForAudioFrameClassification } from "@huggingface/transformers";
 import { WhisperTextStreamer } from "./utils/WhisperTextStreamer";
 
 // Speaker diarization model
-class SpeakerDiarizationPipeline {
-    static task = 'feature-extraction';
-    static model = 'Xenova/wavlm-base-plus-sv';
-    static instance = null;
+class PipelineSingeton {
+    static segmentation_model_id = 'onnx-community/pyannote-segmentation-3.0';
+    static segmentation_instance = null;
+    static segmentation_processor = null;
+    static authToken = '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'; // TODO: Replace with your token
 
-    static async getInstance(progress_callback = null) {
-        if (this.instance === null) {
-            this.instance = pipeline(this.task, this.model, { progress_callback });
-        }
-        return this.instance;
+    static async getInstance(progress_callback = null, device = 'wasm') {
+        this.segmentation_processor ??= await AutoProcessor.from_pretrained(this.segmentation_model_id, {
+            progress_callback,
+            use_auth_token: this.authToken,
+        });
+        this.segmentation_instance ??= await AutoModelForAudioFrameClassification.from_pretrained(this.segmentation_model_id, {
+            device: device,
+            dtype: 'fp32',
+            progress_callback,
+            use_auth_token: this.authToken,
+        });
+
+        return [this.segmentation_processor, this.segmentation_instance];
     }
 }
+
+const makeProgressCallback = () => (progress) => {
+  // progress = { status, file, progress, loaded, total, name }
+  self.postMessage(progress);
+};
+
 
 // Speaker diarization utilities
 function cosine_similarity(a, b) {
@@ -29,10 +43,33 @@ function cosine_similarity(a, b) {
     return dot_product / (Math.sqrt(norm_a) * Math.sqrt(norm_b));
 }
 
-function cluster_speakers(embeddings, threshold = 0.7) {
+function cluster_speakers(embeddings) {
+    // Clustering hiérarchique amélioré avec validation de similarité
+    const thresholds = [0.85, 0.75, 0.65];
     const clusters = [];
     const assignments = new Array(embeddings.length).fill(-1);
     
+    for (const threshold of thresholds) {
+        for (let i = 0; i < embeddings.length; i++) {
+            if (assignments[i] === -1) {
+                const cluster = [i];
+                assignments[i] = clusters.length;
+                
+                for (let j = i + 1; j < embeddings.length; j++) {
+                    if (assignments[j] !== -1) continue;
+                    
+                    const similarity = cosine_similarity(embeddings[i], embeddings[j]);
+                    if (similarity > threshold) {
+                        cluster.push(j);
+                        assignments[j] = clusters.length;
+                    }
+                }
+                clusters.push(cluster);
+            }
+        }
+    }
+    
+    const fallbackThreshold = 0.65;
     for (let i = 0; i < embeddings.length; i++) {
         if (assignments[i] !== -1) continue;
         
@@ -43,7 +80,7 @@ function cluster_speakers(embeddings, threshold = 0.7) {
             if (assignments[j] !== -1) continue;
             
             const similarity = cosine_similarity(embeddings[i], embeddings[j]);
-            if (similarity > threshold) {
+            if (similarity > fallbackThreshold) {
                 cluster.push(j);
                 assignments[j] = clusters.length;
             }
@@ -56,84 +93,19 @@ function cluster_speakers(embeddings, threshold = 0.7) {
 }
 
 async function performSpeakerDiarization(audio, chunks) {
-    try {
-        const diarizer = await SpeakerDiarizationPipeline.getInstance();
-        
-        // Extract embeddings for each chunk
-        const embeddings = [];
-        const validChunks = [];
-        
-        for (const chunk of chunks) {
-            if (chunk.timestamp[0] !== null && chunk.timestamp[1] !== null) {
-                const start_sample = Math.floor(chunk.timestamp[0] * 16000);
-                const end_sample = Math.floor(chunk.timestamp[1] * 16000);
-                
-                if (start_sample < audio.length && end_sample <= audio.length && end_sample > start_sample) {
-                    const chunk_audio = audio.slice(start_sample, end_sample);
-                    
-                    if (chunk_audio.length > 1600) { // At least 0.1 seconds
-                        const { data } = await diarizer(chunk_audio);
-                        embeddings.push(Array.from(data));
-                        validChunks.push(chunk);
-                    }
-                }
-            }
-        }
-        
-        if (embeddings.length === 0) {
-            return { chunks, speakerSegments: [] };
-        }
-        
-        // Cluster speakers
-        const speaker_assignments = cluster_speakers(embeddings);
-        
-        // Assign speakers to chunks
-        const chunksWithSpeakers = chunks.map(chunk => ({ ...chunk }));
-        for (let i = 0; i < validChunks.length; i++) {
-            const chunkIndex = chunks.indexOf(validChunks[i]);
-            if (chunkIndex !== -1) {
-                chunksWithSpeakers[chunkIndex].speaker = `Speaker ${speaker_assignments[i] + 1}`;
-            }
-        }
-        
-        // Create speaker segments
-        const speakerSegments = [];
-        let currentSpeaker = null;
-        let segmentStart = null;
-        
-        for (const chunk of chunksWithSpeakers) {
-            if (chunk.speaker && chunk.timestamp[0] !== null) {
-                if (currentSpeaker !== chunk.speaker) {
-                    if (currentSpeaker !== null && segmentStart !== null) {
-                        speakerSegments.push({
-                            speaker: currentSpeaker,
-                            start: segmentStart,
-                            end: chunk.timestamp[0]
-                        });
-                    }
-                    currentSpeaker = chunk.speaker;
-                    segmentStart = chunk.timestamp[0];
-                }
-            }
-        }
-        
-        // Add final segment
-        if (currentSpeaker !== null && segmentStart !== null) {
-            const lastChunk = chunksWithSpeakers[chunksWithSpeakers.length - 1];
-            if (lastChunk && lastChunk.timestamp[1] !== null) {
-                speakerSegments.push({
-                    speaker: currentSpeaker,
-                    start: segmentStart,
-                    end: lastChunk.timestamp[1]
-                });
-            }
-        }
-        
-        return { chunks: chunksWithSpeakers, speakerSegments };
-    } catch (error) {
-        console.warn('Speaker diarization failed:', error);
-        return { chunks, speakerSegments: [] };
+    const [processor, model] = await PipelineSingeton.getInstance();
+    const inputs = await processor(audio);
+    const { logits } = await model(inputs);
+    const segments = processor.post_process_speaker_diarization(logits, audio.length)[0];
+
+    // Attach labels
+    for (const segment of segments) {
+        segment.label = model.config.id2label[segment.id];
     }
+
+    // Intégrer avec les chunks existants (adaptation nécessaire selon la structure)
+    // Pour l'instant, retourner les segments directement; ajuster selon les besoins
+    return { chunks, speakerSegments: segments };
 }
 
 // Configuration explicite et robuste des chemins WASM
@@ -179,7 +151,12 @@ const checkEnvironment = () => {
         diagnostics.wasm = typeof WebAssembly === 'object' && typeof WebAssembly.instantiate === 'function';
         
         // Vérifier SIMD
-        diagnostics.simd = typeof WebAssembly.SIMD !== 'undefined';
+        try {
+            const module = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 11]);
+            diagnostics.simd = WebAssembly.validate(module);
+        } catch (e) {
+            diagnostics.simd = false;
+        }
         
         // Vérifier les Web Workers avec SharedArrayBuffer
         diagnostics.threads = typeof SharedArrayBuffer !== 'undefined';
@@ -294,7 +271,13 @@ class PipelineFactory {
             };
 
             try {
-                this.instance = await pipeline(this.task, this.model, options);
+                this.instance = await pipeline(this.task, this.model, {
+  progress_callback: makeProgressCallback(),
+  use_auth_token: PipelineSingeton.authToken,
+  device: 'webgpu',
+  dtype: this.dtype || 'q4'
+});
+
             } catch (error) {
                 if (this.instance !== null) {
                     try {
@@ -313,11 +296,14 @@ class PipelineFactory {
                     this.gpu = false;
                     options.device = "wasm";
                     try {
-                        this.instance = await pipeline(
-                            this.task,
-                            this.model,
-                            options,
-                        );
+                        const newOptions = { ...options };
+delete newOptions.progress_callback;
+this.instance = await pipeline(this.task, this.model, {
+    progress_callback: makeProgressCallback(),
+    use_auth_token: PipelineSingeton.authToken,
+    ...newOptions
+});
+
                     } catch (error2) {
                         if (this.instance !== null) {
                             try {
@@ -340,8 +326,10 @@ class PipelineFactory {
 }
 
 self.addEventListener('message', async (event) => {
+    const { token, ...payload } = event.data;
+
     try {
-        const result = await transcribe(event.data);
+        const result = await transcribe(payload);
         
         // Envoyer le résultat final de la transcription
         if (result) {
@@ -411,6 +399,7 @@ self.addEventListener('message', async (event) => {
 class AutomaticSpeechRecognitionPipelineFactory {
     static task = "automatic-speech-recognition";
     static model = null;
+    static authToken = 'hf_YOUR_HUGGING_FACE_TOKEN'; // TODO: Replace with your token
     static dtype = null;
     static gpu = false;
     static instance = null;
@@ -434,11 +423,14 @@ class AutomaticSpeechRecognitionPipelineFactory {
                 // Tentative avec WebGPU d'abord si disponible
                 if (this.gpu && env.webgpu) {
                     console.log('Attempting initialization with WebGPU...');
-                    this.instance = await pipeline(this.task, this.model, {
-                        dtype: this.dtype,
+                    const pipelineOptions = {
+                        progress_callback: makeProgressCallback(),
+                        use_auth_token: PipelineSingeton.authToken,
                         device: 'webgpu',
-                        progress_callback,
-                    });
+                        dtype: this.dtype || 'q4',
+                    };
+                    this.instance = await pipeline(this.task, this.model, pipelineOptions);
+
                     console.log('WebGPU initialized successfully');
                     return this.instance;
                 } else {
@@ -496,7 +488,11 @@ class AutomaticSpeechRecognitionPipelineFactory {
             for (const { name, config } of wasmConfigs) {
                 try {
                     console.log(`Attempting initialization: ${name}`);
-                    this.instance = await pipeline(this.task, this.model, config);
+                    this.instance = await pipeline(this.task, this.model, {
+                      use_auth_token: SpeakerDiarizationPipeline.authToken,
+                      ...config
+                    });
+
                     console.log(`${name} initialized successfully`);
                     return this.instance;
                 } catch (error) {
@@ -580,9 +576,10 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
             });
         },
         token_callback_function: (x) => {
-            start_time ??= performance.now();
+            const perf = (typeof performance !== "undefined" ? performance : { now: () => Date.now() });
+            start_time ??= perf.now();
             if (num_tokens++ > 0) {
-                tps = (num_tokens / (performance.now() - start_time)) * 1000;
+                tps = (num_tokens / (perf.now() - start_time)) * 1000;
             }
         },
         callback_function: (x) => {
