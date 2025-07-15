@@ -6,7 +6,7 @@ class PipelineSingeton {
     static segmentation_model_id = 'onnx-community/pyannote-segmentation-3.0';
     static segmentation_instance = null;
     static segmentation_processor = null;
-    static authToken = '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'; // TODO: Replace with your token
+    static authToken = import.meta.env.VITE_HF_AUTH_TOKEN ?? '';
 
     static async getInstance(progress_callback = null, device = 'wasm') {
         this.segmentation_processor ??= await AutoProcessor.from_pretrained(this.segmentation_model_id, {
