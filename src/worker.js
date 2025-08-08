@@ -439,12 +439,32 @@ class AutomaticSpeechRecognitionPipelineFactory {
                 }
             } catch (error) {
                 webgpuError = error;
+                
+                // Détection spécifique des erreurs WebGPU critiques
+                const isWebGPUCriticalError = error.message && (
+                    error.message.includes('A valid external Instance reference no longer exists') ||
+                    error.message.includes('mapAsync') ||
+                    error.message.includes('GPUBuffer') ||
+                    error.name === 'AbortError'
+                );
+                
                 console.warn('WebGPU failed:', {
                     message: error.message,
                     code: error.code,
                     name: error.name,
+                    isWebGPUCriticalError,
                     stack: error.stack
                 });
+                
+                // Nettoyer l'instance défaillante si elle existe
+                if (this.instance && isWebGPUCriticalError) {
+                    try {
+                        await this.instance.dispose();
+                    } catch (disposeError) {
+                        console.warn('Error disposing failed WebGPU instance:', disposeError);
+                    }
+                    this.instance = null;
+                }
             }
             
             // Tentatives de fallback WASM avec différentes configurations
@@ -681,23 +701,54 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         // Actually run transcription
         output = await transcriber(audio, params);
     } catch (error) {
-        console.error(error);
-        if (gpu) {
+        console.error('Transcription error:', error);
+        
+        // Détection spécifique des erreurs WebGPU
+        const isWebGPUError = error.message && (
+            error.message.includes('A valid external Instance reference no longer exists') ||
+            error.message.includes('mapAsync') ||
+            error.message.includes('GPUBuffer') ||
+            error.name === 'AbortError'
+        );
+        
+        if (gpu || isWebGPUError) {
+            console.warn('WebGPU error detected, falling back to WASM:', {
+                message: error.message,
+                name: error.name,
+                isWebGPUError
+            });
+            
             try {
-                (await p.getInstance()).dispose();
+                // Nettoyer l'instance GPU défaillante
+                if (p.instance) {
+                    try {
+                        await p.instance.dispose();
+                    } catch (disposeError) {
+                        console.warn('Error disposing GPU instance:', disposeError);
+                    }
+                }
             } catch (_) {
-                // ignore
+                // ignore cleanup errors
             }
+            
+            // Forcer le fallback vers WASM
             p.instance = null;
             p.gpu = false;
+            
             try {
+                console.log('Attempting WASM fallback...');
                 const cpuTranscriber = await p.getInstance(null); // Pas de progress_callback pour le fallback
                 output = await cpuTranscriber(audio, params);
+                console.log('WASM fallback successful');
             } catch (error2) {
-                console.error(error2);
+                console.error('WASM fallback failed:', error2);
                 self.postMessage({
                     status: "error",
-                    data: error2,
+                    data: {
+                        message: `GPU failed and WASM fallback failed: ${error2.message}`,
+                        originalGPUError: error.message,
+                        wasmError: error2.message
+                    },
                 });
                 return null;
             }
