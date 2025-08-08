@@ -20,12 +20,12 @@ export interface TranscriberData {
     isBusy: boolean;
     tps?: number;
 }
-interface SpeakerGroup {
+/*interface SpeakerGroup {
     speaker: string;
     chunks: Chunk[];
     startTime: number;
     endTime: number;
-}
+}*/
 
 // SECTION 2: FONCTIONS UTILITAIRES
 function formatAudioTimestamp(timeInSeconds: number): string {
@@ -120,14 +120,14 @@ interface TranscriptProps {
 }
 export default function Transcript({ transcribedData, interimTranscript, currentTime, onSeek }: TranscriptProps) {
     // Mode fixé sur 'chunks' car la diarisation est désactivée
-    const viewMode = 'chunks';
+    //const viewMode = 'chunks';
     const [autoScroll, setAutoScroll] = useState(true);
 
     const endOfMessagesRef = useRef<HTMLDivElement>(null);
     const virtualListRef = useRef<List>(null);
-    const speakerViewRef = useRef<HTMLDivElement>(null);
+    //const speakerViewRef = useRef<HTMLDivElement>(null);
 
-    const speakerGroups = useMemo((): SpeakerGroup[] => {
+    /*const speakerGroups = useMemo((): SpeakerGroup[] => {
         if (!transcribedData?.chunks || !transcribedData?.speakerSegments) return [];
         const groups: SpeakerGroup[] = [];
         let chunkIndex = 0;
@@ -154,7 +154,7 @@ export default function Transcript({ transcribedData, interimTranscript, current
             }
         }
         return groups;
-    }, [transcribedData?.chunks, transcribedData?.speakerSegments]);
+    }, [transcribedData?.chunks, transcribedData?.speakerSegments]);*/
 
     const currentChunkIndex = useMemo(() => {
         if (!transcribedData?.chunks || currentTime === undefined) return -1;
