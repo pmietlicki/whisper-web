@@ -67,6 +67,7 @@ export interface Transcriber {
         sampleRate: number;
         channels: number;
     }) => void;
+    interimTranscript?: string;
     output?: TranscriberData;
     model: string;
     setModel: (model: string) => void;
@@ -84,6 +85,7 @@ export function useTranscriber(): Transcriber {
     const [transcript, setTranscript] = useState<TranscriberData | undefined>(
         undefined,
     );
+    const [interimTranscript, setInterimTranscript] = useState<string | undefined>(undefined);
     const [isBusy, setIsBusy] = useState(false);
     const [isModelLoading, setIsModelLoading] = useState(false);
 
@@ -104,10 +106,23 @@ export function useTranscriber(): Transcriber {
                     }),
                 );
                 break;
+            case "interim":
+                console.log('Received interim message:', message);
+                // Use the text field directly if available, otherwise fall back to data.text
+                const interimText = message.text || message.data?.text || '';
+                setInterimTranscript(interimText);
+                break;
             case "update":
             case "complete": {
                 const busy = message.status === "update";
                 const updateMessage = message as TranscriberUpdateData;
+                console.log(`Received ${message.status} message:`, message);
+                
+                // Only clear interim transcript on complete, not on update
+                if (message.status === "complete") {
+                    setInterimTranscript(undefined);
+                }
+                
                 setTranscript({
                     isBusy: busy,
                     text: updateMessage.data.text,
@@ -166,6 +181,7 @@ export function useTranscriber(): Transcriber {
 
     const onInputChange = useCallback(() => {
         setTranscript(undefined);
+        setInterimTranscript(undefined);
     }, []);
 
     const postRequest = useCallback(
@@ -179,6 +195,7 @@ export function useTranscriber(): Transcriber {
         }) => {
             if (audioData) {
                 setTranscript(undefined);
+                setInterimTranscript(undefined);
                 setIsBusy(true);
 
                 let audio;
@@ -227,6 +244,7 @@ export function useTranscriber(): Transcriber {
             isModelLoading,
             progressItems,
             start: postRequest,
+            interimTranscript,
             output: transcript,
             model,
             setModel,
@@ -245,6 +263,7 @@ export function useTranscriber(): Transcriber {
         isModelLoading,
         progressItems,
         postRequest,
+        interimTranscript,
         transcript,
         model,
         dtype,

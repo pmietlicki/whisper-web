@@ -54,7 +54,9 @@
             "speakers_view": "Vue par locuteurs",
             "auto_scroll": "Défilement automatique",
             "speakers_detected": "{{count}} locuteurs détectés",
-            "unknown_speaker": "Locuteur inconnu"
+            "unknown_speaker": "Locuteur inconnu",
+            "transcribing_in_progress": "En cours...",
+            "real_time_transcription": "Transcription en temps réel:"
         },
         "language_selector": {
             "title": "Langue",

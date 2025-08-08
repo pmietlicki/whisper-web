@@ -54,7 +54,9 @@
             "speakers_view": "Speakers view",
             "auto_scroll": "Auto scroll",
             "speakers_detected": "{{count}} speakers detected",
-            "unknown_speaker": "Unknown speaker"
+            "unknown_speaker": "Unknown speaker",
+            "transcribing_in_progress": "In progress...",
+            "real_time_transcription": "Real-time transcription:"
         },
         "language_selector": {
             "title": "Language",

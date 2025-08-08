@@ -53,6 +53,7 @@ function App() {
                     />
                     <Transcript 
                         transcribedData={transcriber.output} 
+                        interimTranscript={transcriber.interimTranscript}
                         currentTime={currentTime}
                         onSeek={handleSeek}
                     />

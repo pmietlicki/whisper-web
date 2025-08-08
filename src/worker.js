@@ -564,9 +564,17 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
     let start_time;
     let num_tokens = 0;
     let tps;
+    let interimResult = ""; // Holds the text for the current chunk being processed
+
     const streamer = new WhisperTextStreamer(transcriber.tokenizer, {
         time_precision,
+        skip_prompt: true,
+        decode_kwargs: {
+            skip_special_tokens: true,
+        },
         on_chunk_start: (x) => {
+            console.log('Chunk started at time:', x);
+            interimResult = ""; // Reset for new chunk
             const offset = (chunk_length_s - stride_length_s) * chunk_count;
             chunks.push({
                 text: "",
@@ -576,6 +584,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
             });
         },
         token_callback_function: (x) => {
+            console.log('Token received:', x);
             const perf = (typeof performance !== "undefined" ? performance : { now: () => Date.now() });
             start_time ??= perf.now();
             if (num_tokens++ > 0) {
@@ -584,27 +593,59 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
         },
         callback_function: (x) => {
             if (chunks.length === 0) return;
-            // Append text to the last chunk
-            chunks.at(-1).text += x;
 
-            self.postMessage({
-                status: "update",
-                data: {
-                    text: "", // No need to send full text yet
-                    chunks,
-                    tps,
-                },
-            });
+            // Append text to the interim result
+            interimResult += x;
+            console.log('Streaming partial text:', interimResult);
+
+            // Send the partial, real-time result to the main thread more frequently
+            if (interimResult && interimResult.trim()) {
+                self.postMessage({
+                    status: "interim",
+                    text: interimResult.trim(),
+                    data: {
+                        text: interimResult,
+                        tps,
+                    },
+                });
+            }
         },
         on_chunk_end: (x) => {
+            console.log('Chunk ended at time:', x);
             const current = chunks.at(-1);
-            current.timestamp[1] = x + current.offset;
-            current.finalised = true;
+            if (current) {
+                current.text = interimResult; // Finalize the text for the chunk
+                current.timestamp[1] = x + current.offset;
+                current.finalised = true;
+
+                // Send an update with the now-complete chunk list
+                self.postMessage({
+                    status: "update",
+                    data: {
+                        text: chunks.map(chunk => chunk.text).join(' '), // Full text reconstruction
+                        chunks,
+                        tps,
+                    },
+                });
+            }
         },
         on_finalize: () => {
+            console.log('Chunk finalized');
             start_time = null;
             num_tokens = 0;
             ++chunk_count;
+            interimResult = ""; // Clear interim result for the next transcription
+            
+            // Send update with current chunks
+            if (chunks.length > 0) {
+                self.postMessage({
+                    status: 'update',
+                    data: {
+                        text: chunks.map(chunk => chunk.text).join(' '),
+                        chunks: chunks,
+                    },
+                });
+            }
         },
     });
 
@@ -673,23 +714,24 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
     let finalChunks = chunks;
     let speakerSegments = [];
     
-    try {
-        const diarizationResult = await performSpeakerDiarization(audio, chunks);
-        finalChunks = diarizationResult.chunks;
-        speakerSegments = diarizationResult.speakerSegments;
-        
-        // Send final update with speaker information
-        self.postMessage({
-            status: "complete",
-            data: {
-                text: finalChunks.map(chunk => chunk.text).join("").trim(),
-                chunks: finalChunks,
-                tps,
-                speakerSegments,
-            },
-        });
-    } catch (error) {
-        console.warn('Speaker diarization failed, proceeding without it:', error);
+    // DIARIZATION TEMPORAIREMENT DÉSACTIVÉE POUR AMÉLIORER LES PERFORMANCES
+    // try {
+    //     const diarizationResult = await performSpeakerDiarization(audio, chunks);
+    //     finalChunks = diarizationResult.chunks;
+    //     speakerSegments = diarizationResult.speakerSegments;
+    //     
+    //     // Send final update with speaker information
+    //     self.postMessage({
+    //         status: "complete",
+    //         data: {
+    //             text: finalChunks.map(chunk => chunk.text).join("").trim(),
+    //             chunks: finalChunks,
+    //             tps,
+    //             speakerSegments,
+    //         },
+    //     });
+    // } catch (error) {
+    //     console.warn('Speaker diarization failed, proceeding without it:', error);
         // Send final update without speaker information
         self.postMessage({
             status: "complete",
@@ -700,7 +742,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
                 speakerSegments: [],
             },
         });
-    }
+    // }
 
     return {
         tps,

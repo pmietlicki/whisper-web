@@ -52,7 +52,9 @@
             "speakers_view": "Talarvy",
             "auto_scroll": "Automatisk rullning",
             "speakers_detected": "{{count}} talare upptäckta",
-            "unknown_speaker": "Okänd talare"
+            "unknown_speaker": "Okänd talare",
+            "transcribing_in_progress": "Pågår...",
+            "real_time_transcription": "Realtidstranskription:"
         },
         "language_selector": {
             "title": "Språk",

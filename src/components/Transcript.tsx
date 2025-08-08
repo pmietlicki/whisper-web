@@ -114,11 +114,13 @@ const TranscriptChunk = memo(({ chunk, isCurrent, isBusy, showSpeaker, onClick, 
 // SECTION 4: COMPOSANT PRINCIPAL
 interface TranscriptProps {
     transcribedData: TranscriberData | undefined;
+    interimTranscript: string | undefined;
     currentTime?: number;
     onSeek?: (time: number) => void;
 }
-export default function Transcript({ transcribedData, currentTime, onSeek }: TranscriptProps) {
-    const [viewMode, setViewMode] = useState<'chunks' | 'speakers'>('speakers');
+export default function Transcript({ transcribedData, interimTranscript, currentTime, onSeek }: TranscriptProps) {
+    // Mode fixé sur 'chunks' car la diarisation est désactivée
+    const viewMode = 'chunks';
     const [autoScroll, setAutoScroll] = useState(true);
 
     const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -165,16 +167,13 @@ export default function Transcript({ transcribedData, currentTime, onSeek }: Tra
 
     useEffect(() => {
         if (!autoScroll) return;
-        if (viewMode === 'chunks' && currentChunkIndex >= 0 && virtualListRef.current) {
+        if (currentChunkIndex >= 0 && virtualListRef.current) {
             virtualListRef.current.scrollToItem(currentChunkIndex, 'center');
-        } else if (viewMode === 'speakers' && currentChunkIndex >= 0 && speakerViewRef.current) {
-            const element = speakerViewRef.current.querySelector(`[data-chunk-index='${currentChunkIndex}']`);
-            element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        if (transcribedData?.isBusy) {
+        if (transcribedData?.isBusy || interimTranscript) {
             endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
         }
-    }, [currentChunkIndex, autoScroll, viewMode, transcribedData?.isBusy]);
+    }, [currentChunkIndex, autoScroll, transcribedData?.isBusy, interimTranscript]);
 
     const saveBlob = (blob: Blob, filename: string) => {
         const url = URL.createObjectURL(blob);
@@ -188,14 +187,7 @@ export default function Transcript({ transcribedData, currentTime, onSeek }: Tra
     };
 
     const exportTXT = () => {
-        let text = "";
-        if (viewMode === 'speakers' && speakerGroups.length > 0) {
-            text = speakerGroups.map(group =>
-                `${group.speaker}:\n${group.chunks.map(c => c.text).join(" ").trim()}`
-            ).join("\n\n");
-        } else {
-            text = transcribedData?.chunks.map(c => c.text).join(" ").trim() ?? "";
-        }
+        const text = transcribedData?.chunks.map(c => c.text).join(" ").trim() ?? "";
         saveBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), "transcript.txt");
     };
 
@@ -226,66 +218,38 @@ export default function Transcript({ transcribedData, currentTime, onSeek }: Tra
             {transcribedData?.chunks && transcribedData.chunks.length > 0 && (
                 <div className='flex flex-wrap items-center justify-between gap-4 mb-4 p-3 bg-gray-50 rounded-lg border'>
                     <div className='flex items-center space-x-4'>
-                        <div className='flex items-center space-x-2'>
-                            <span className='text-sm font-medium text-gray-700'>{t("transcript.view_mode", "Vue")}:</span>
-                            <button onClick={() => setViewMode('chunks')} className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'chunks' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
-                                {t("transcript.chunks_view", "Par segments")}
-                            </button>
-                            <button onClick={() => setViewMode('speakers')} className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'speakers' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
-                                {t("transcript.speakers_view", "Par locuteurs")}
-                            </button>
-                        </div>
                         <label className='flex items-center space-x-2 cursor-pointer'>
                             <input type='checkbox' checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500' />
                             <span className='text-sm text-gray-700'>{t("transcript.auto_scroll", "Défilement auto")}</span>
                         </label>
                     </div>
-                    {viewMode === 'speakers' && speakerGroups.length > 0 && (
-                        <div className='text-sm text-gray-600 font-medium'>
-                            {t("transcript.speakers_detected", { count: speakerGroups.length, defaultValue: `${speakerGroups.length} locuteur(s) détecté(s)` })}
-                        </div>
-                    )}
                 </div>
             )}
 
             {/* --- CONTENEUR DE LA TRANSCRIPTION --- */}
-            {transcribedData?.chunks && transcribedData.chunks.length > 0 && (
+            {(transcribedData?.chunks && transcribedData.chunks.length > 0) || interimTranscript ? (
                 <div className='w-full border border-gray-200 rounded-lg bg-white overflow-hidden'>
-                    {viewMode === 'speakers' ? (
-                        <div ref={speakerViewRef} className='w-full max-h-[600px] overflow-y-auto scrollbar-thin p-4'>
-                            {speakerGroups.map((group, groupIndex) => {
-                                const color = getSpeakerColor(group.speaker);
-                                return (
-                                    <div key={`group-${groupIndex}`} className='mb-6 last:mb-0'>
-                                        <div className='flex items-center mb-3 sticky top-0 bg-white/80 backdrop-blur-sm py-2 z-10'>
-                                            <div className={`w-3 h-3 rounded-full mr-3 ${color.bg}`}></div>
-                                            <h3 className={`font-semibold ${color.text}`}>{group.speaker}</h3>
-                                            <span className='ml-2 text-xs text-gray-500'>({formatAudioTimestamp(group.startTime)} - {formatAudioTimestamp(group.endTime)})</span>
-                                        </div>
-                                        <div className='ml-2 space-y-1'>
-                                            {group.chunks.map((chunk) => {
-                                                const globalIndex = transcribedData!.chunks.indexOf(chunk);
-                                                return (
-                                                    <div key={globalIndex} data-chunk-index={globalIndex}>
-                                                        <TranscriptChunk chunk={chunk} isCurrent={globalIndex === currentChunkIndex} isBusy={transcribedData?.isBusy ?? false} showSpeaker={false} onClick={() => onSeek?.(chunk.timestamp[0])} />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            <div ref={endOfMessagesRef} />
-                        </div>
-                    ) : (
-                        <List ref={virtualListRef} height={600} itemCount={transcribedData.chunks.length} itemSize={90} width="100%">
+                    {transcribedData?.chunks && transcribedData.chunks.length > 0 && (
+                        <List ref={virtualListRef} height={interimTranscript ? 550 : 600} itemCount={transcribedData.chunks.length} itemSize={90} width="100%">
                             {({ index, style }) => (
-                                <TranscriptChunk style={style} chunk={transcribedData.chunks[index]} isCurrent={index === currentChunkIndex} isBusy={transcribedData.isBusy} showSpeaker={true} onClick={() => onSeek?.(transcribedData.chunks[index].timestamp[0])} />
+                                <TranscriptChunk style={style} chunk={transcribedData.chunks[index]} isCurrent={index === currentChunkIndex} isBusy={transcribedData.isBusy} showSpeaker={false} onClick={() => onSeek?.(transcribedData.chunks[index].timestamp[0])} />
                             )}
                         </List>
                     )}
+                    {interimTranscript && (
+                        <div className="w-full px-2 py-1 border-t border-gray-200">
+                            <div className="w-full flex flex-row p-3 rounded-lg bg-blue-50 border border-blue-200 animate-pulse">
+                                <div className='mr-4 text-xs text-blue-500 font-mono min-w-[60px] mt-1'>{t('transcript.transcribing_in_progress')}</div>
+                                <div className='flex-1 text-blue-700 italic'>
+                                    <span className='text-xs text-blue-500 mr-2'>{t('transcript.real_time_transcription')}</span>
+                                    {interimTranscript}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <div ref={endOfMessagesRef} />
                 </div>
-            )}
+            ) : null}
 
             {/* --- EMPLACEMENT 2: BOUTONS D'EXPORT ET STATISTIQUES --- */}
             <div className="mt-4">
