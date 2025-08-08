@@ -122,10 +122,10 @@ if (typeof window === 'undefined') {
                 simdSupported = false;
             }
             
-            // Configuration principale très conservatrice pour la compatibilité maximale
+            // Configuration principale adaptée aux capacités du navigateur
             env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
             env.backends.onnx.wasm.numThreads = 1; // Toujours 1 thread pour éviter les problèmes
-            env.backends.onnx.wasm.simd = false; // Désactiver SIMD par défaut pour la compatibilité
+            env.backends.onnx.wasm.simd = simdSupported; // Activer SIMD si supporté par le navigateur
             
             // Configuration additionnelle pour éviter les erreurs d'initialisation
             env.backends.onnx.wasm.proxy = false;
