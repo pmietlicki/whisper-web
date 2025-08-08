@@ -489,7 +489,7 @@ class AutomaticSpeechRecognitionPipelineFactory {
                 try {
                     console.log(`Attempting initialization: ${name}`);
                     this.instance = await pipeline(this.task, this.model, {
-                      use_auth_token: SpeakerDiarizationPipeline.authToken,
+                      use_auth_token: AutomaticSpeechRecognitionPipelineFactory.authToken,
                       ...config
                     });
 
