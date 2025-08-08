@@ -113,21 +113,55 @@ if (typeof window === 'undefined') {
     // Dans un worker, configurer les chemins WASM avec fallbacks
     import('@huggingface/transformers').then(({ env }) => {
         try {
-            // Configuration principale
+            // Détecter les capacités SIMD du navigateur
+            let simdSupported = false;
+            try {
+                const module = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 11]);
+                simdSupported = WebAssembly.validate(module);
+            } catch (e) {
+                simdSupported = false;
+            }
+            
+            // Configuration principale très conservatrice pour la compatibilité maximale
             env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
-            env.backends.onnx.wasm.numThreads = 1;
-            env.backends.onnx.wasm.simd = true;
+            env.backends.onnx.wasm.numThreads = 1; // Toujours 1 thread pour éviter les problèmes
+            env.backends.onnx.wasm.simd = false; // Désactiver SIMD par défaut pour la compatibilité
             
             // Configuration additionnelle pour éviter les erreurs d'initialisation
             env.backends.onnx.wasm.proxy = false;
+            env.backends.onnx.wasm.initTimeout = 30000; // 30 secondes de timeout
             env.allowLocalModels = false;
             env.allowRemoteModels = true;
             env.useBrowserCache = true;
             env.useCustomCache = false;
             
-            console.log('WASM configuration applied successfully');
+            // Configuration de session par défaut pour la stabilité
+            if (!env.backends.onnx.wasm.sessionOptions) {
+                env.backends.onnx.wasm.sessionOptions = {};
+            }
+            env.backends.onnx.wasm.sessionOptions.enableCpuMemArena = false;
+            env.backends.onnx.wasm.sessionOptions.enableMemPattern = false;
+            env.backends.onnx.wasm.sessionOptions.enableMemReuse = false;
+            env.backends.onnx.wasm.sessionOptions.executionMode = 'sequential';
+            
+            console.log('WASM configuration applied successfully (conservative mode):', {
+                simdDetected: simdSupported,
+                simdEnabled: env.backends.onnx.wasm.simd,
+                threadsSupported: typeof SharedArrayBuffer !== 'undefined',
+                numThreads: env.backends.onnx.wasm.numThreads,
+                sessionOptions: env.backends.onnx.wasm.sessionOptions
+            });
         } catch (configError) {
             console.error('Error during WASM configuration:', configError);
+            // Configuration de fallback en cas d'erreur
+            try {
+                env.backends.onnx.wasm.numThreads = 1;
+                env.backends.onnx.wasm.simd = false;
+                env.backends.onnx.wasm.proxy = false;
+                console.log('Applied fallback WASM configuration');
+            } catch (fallbackError) {
+                console.error('Failed to apply fallback configuration:', fallbackError);
+            }
         }
     }).catch(importError => {
         console.error('Error importing transformers:', importError);
@@ -484,7 +518,12 @@ class AutomaticSpeechRecognitionPipelineFactory {
                         dtype: this.dtype,
                         device: 'wasm',
                         progress_callback: null, // Pas d'affichage pour les fallbacks
-                        execution_providers: ['wasm']
+                        execution_providers: ['wasm'],
+                        session_options: {
+                            enable_cpu_mem_arena: false,
+                            enable_mem_pattern: false,
+                            enable_mem_reuse: false
+                        }
                     }
                 },
                 {
@@ -493,6 +532,7 @@ class AutomaticSpeechRecognitionPipelineFactory {
                         dtype: 'q8',
                         device: 'wasm',
                         progress_callback: null, // Pas d'affichage pour les fallbacks
+                        execution_providers: ['wasm']
                     }
                 },
                 {
@@ -501,6 +541,22 @@ class AutomaticSpeechRecognitionPipelineFactory {
                         dtype: 'q4',
                         device: 'wasm',
                         progress_callback: null, // Pas d'affichage pour les fallbacks
+                        execution_providers: ['wasm']
+                    }
+                },
+                {
+                    name: 'WASM minimal configuration',
+                    config: {
+                        dtype: 'fp32',
+                        device: 'wasm',
+                        progress_callback: null,
+                        execution_providers: ['wasm'],
+                        session_options: {
+                            enable_cpu_mem_arena: false,
+                            enable_mem_pattern: false,
+                            enable_mem_reuse: false,
+                            execution_mode: 'sequential'
+                        }
                     }
                 }
             ];
