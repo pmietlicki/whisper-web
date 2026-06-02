@@ -27,6 +27,8 @@ export default function AudioRecorder(props: {
     const [recording, setRecording] = useState(false);
     const [duration, setDuration] = useState(0);
     const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+    const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+    const [recordingError, setRecordingError] = useState<string | null>(null);
 
     const streamRef = useRef<MediaStream | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -37,6 +39,7 @@ export default function AudioRecorder(props: {
     const startRecording = async () => {
         // Reset recording (if any)
         setRecordedBlob(null);
+        setRecordingError(null);
 
         try {
             if (!streamRef.current) {
@@ -70,6 +73,12 @@ export default function AudioRecorder(props: {
                         blob = await webmFixDuration(blob, duration, blob.type);
                     }
                     setRecordedBlob(blob);
+                    setRecordedUrl((previousUrl) => {
+                        if (previousUrl) {
+                            URL.revokeObjectURL(previousUrl);
+                        }
+                        return URL.createObjectURL(blob);
+                    });
                     props.onRecordingComplete(blob);
 
                     chunksRef.current = [];
@@ -81,6 +90,8 @@ export default function AudioRecorder(props: {
             setRecording(true);
         } catch (error) {
             console.error("Error accessing microphone:", error);
+            setRecordingError(t("recorder.recording_error"));
+            setRecording(false);
         }
     };
 
@@ -104,6 +115,24 @@ export default function AudioRecorder(props: {
         }
     }, [recording]);
 
+    useEffect(() => {
+        return () => {
+            if (recordedUrl) {
+                URL.revokeObjectURL(recordedUrl);
+            }
+        };
+    }, [recordedUrl]);
+
+    useEffect(() => {
+        return () => {
+            if (mediaRecorderRef.current?.state === "recording") {
+                mediaRecorderRef.current.stop();
+            }
+            streamRef.current?.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+        };
+    }, []);
+
     const handleToggleRecording = () => {
         if (recording) {
             stopRecording();
@@ -122,6 +151,7 @@ export default function AudioRecorder(props: {
                         : "bg-green-500 hover:bg-green-600"
                 }`}
                 onClick={handleToggleRecording}
+                aria-pressed={recording}
             >
                 {recording
                     ? t("recorder.stop_recording", {
@@ -130,10 +160,21 @@ export default function AudioRecorder(props: {
                     : t("recorder.start_recording")}
             </button>
 
-            {recordedBlob && (
-                <audio className='w-full' ref={audioRef} controls>
+            {recordingError && (
+                <p className='mt-2 text-sm text-red-700' role='alert'>
+                    {recordingError}
+                </p>
+            )}
+
+            {recordedBlob && recordedUrl && (
+                <audio
+                    className='w-full'
+                    ref={audioRef}
+                    controls
+                    aria-label={t("recorder.recording_preview")}
+                >
                     <source
-                        src={URL.createObjectURL(recordedBlob)}
+                        src={recordedUrl}
                         type={recordedBlob.type}
                     />
                 </audio>

@@ -37,7 +37,16 @@ function App() {
 
     return (
         <>
-            <div className='flex flex-col justify-center items-center min-h-screen py-4 pb-24'>
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-blue-800 focus:shadow-lg focus:ring-2 focus:ring-blue-700"
+            >
+                {t("app.skip_to_content")}
+            </a>
+            <main
+                id="main-content"
+                className='flex flex-col justify-center items-center min-h-screen py-4 pb-24'
+            >
                 <div className='container flex flex-col justify-center items-center'>
                     <h1 className='text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl text-center'>
                         {t("app.title")}
@@ -83,7 +92,7 @@ function App() {
                     />
                     )}
                 </footer>
-            </div>
+            </main>
             <LanguageSelector
                 className='fixed top-4 right-16'
                 currentLanguage={currentLanguage}

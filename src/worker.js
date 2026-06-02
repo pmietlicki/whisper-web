@@ -1,12 +1,38 @@
 import { pipeline, env, AutoProcessor, AutoModelForAudioFrameClassification } from "@huggingface/transformers";
 import { WhisperTextStreamer } from "./utils/WhisperTextStreamer";
 
+const ORT_WASM_VERSION = '1.22.0';
+const ORT_WASM_BASE_URL = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_WASM_VERSION}/dist/`;
+const DEBUG_TRANSCRIPTION = import.meta.env.DEV && import.meta.env.VITE_DEBUG_TRANSCRIPTION === 'true';
+
+const debugLog = (...args) => {
+    if (DEBUG_TRANSCRIPTION) {
+        console.debug(...args);
+    }
+};
+
+const getAuthToken = (token) =>
+    token ??
+    import.meta.env.VITE_HF_AUTH_TOKEN ??
+    import.meta.env.VITE_HF_TOKEN ??
+    '';
+
+const postWorkerError = (message, details = undefined) => {
+    self.postMessage({
+        status: 'error',
+        data: {
+            message,
+            details,
+        },
+    });
+};
+
 // Speaker diarization model
 class PipelineSingeton {
     static segmentation_model_id = 'onnx-community/pyannote-segmentation-3.0';
     static segmentation_instance = null;
     static segmentation_processor = null;
-    static authToken = import.meta.env.VITE_HF_AUTH_TOKEN ?? '';
+    static authToken = getAuthToken();
 
     static async getInstance(progress_callback = null, device = 'wasm') {
         this.segmentation_processor ??= await AutoProcessor.from_pretrained(this.segmentation_model_id, {
@@ -123,7 +149,7 @@ if (typeof window === 'undefined') {
             }
             
             // Configuration principale adaptée aux capacités du navigateur
-            env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
+            env.backends.onnx.wasm.wasmPaths = ORT_WASM_BASE_URL;
             env.backends.onnx.wasm.numThreads = 1; // Toujours 1 thread pour éviter les problèmes
             env.backends.onnx.wasm.simd = simdSupported; // Activer SIMD si supporté par le navigateur
             
@@ -144,7 +170,7 @@ if (typeof window === 'undefined') {
             env.backends.onnx.wasm.sessionOptions.enableMemReuse = false;
             env.backends.onnx.wasm.sessionOptions.executionMode = 'sequential';
             
-            console.log('WASM configuration applied successfully (conservative mode):', {
+            debugLog('WASM configuration applied successfully (conservative mode):', {
                 simdDetected: simdSupported,
                 simdEnabled: env.backends.onnx.wasm.simd,
                 threadsSupported: typeof SharedArrayBuffer !== 'undefined',
@@ -158,7 +184,7 @@ if (typeof window === 'undefined') {
                 env.backends.onnx.wasm.numThreads = 1;
                 env.backends.onnx.wasm.simd = false;
                 env.backends.onnx.wasm.proxy = false;
-                console.log('Applied fallback WASM configuration');
+                debugLog('Applied fallback WASM configuration');
             } catch (fallbackError) {
                 console.error('Failed to apply fallback configuration:', fallbackError);
             }
@@ -199,54 +225,12 @@ const checkEnvironment = () => {
         console.warn('Error during diagnostics:', error);
     }
     
-    console.log('Environment diagnostics:', diagnostics);
+    debugLog('Environment diagnostics:', diagnostics);
     return diagnostics;
 };
 
-// Fonction pour précharger les fichiers WASM
-const preloadWasmFiles = async () => {
-    const wasmFiles = [
-        'ort-wasm.wasm',
-        'ort-wasm-simd.wasm',
-        'ort-wasm-threaded.wasm',
-        'ort-wasm-simd-threaded.wasm'
-    ];
-    
-    const baseUrl = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
-    const results = { success: [], failed: [] };
-    
-    console.log('Preloading WASM files...');
-    
-    for (const file of wasmFiles) {
-        try {
-            const url = baseUrl + file;
-            console.log(`Attempting to preload: ${url}`);
-            
-            // Utiliser fetch pour précharger le fichier
-            const response = await fetch(url, { method: 'HEAD' });
-            
-            if (response.ok) {
-                console.log(`Preloading successful: ${file}`);
-                results.success.push(file);
-            } else {
-                console.warn(`Preloading failed: ${file} (${response.status})`);
-                results.failed.push({ file, status: response.status });
-            }
-        } catch (error) {
-            console.error(`Error preloading ${file}:`, error);
-            results.failed.push({ file, error: error.message });
-        }
-    }
-    
-    console.log('WASM preloading results:', results);
-    return results;
-};
-
-// Exécuter le diagnostic et précharger les fichiers WASM au démarrage
+// Exécuter le diagnostic au démarrage sans déclencher de requêtes réseau.
 checkEnvironment();
-preloadWasmFiles().catch(error => {
-    console.warn('Error preloading WASM files:', error);
-});
 
 import { DTYPES } from "./utils/Constants";
 
@@ -361,6 +345,9 @@ this.instance = await pipeline(this.task, this.model, {
 
 self.addEventListener('message', async (event) => {
     const { token, ...payload } = event.data;
+    const authToken = getAuthToken(token);
+    PipelineSingeton.authToken = authToken;
+    AutomaticSpeechRecognitionPipelineFactory.authToken = authToken;
 
     try {
         const result = await transcribe(payload);
@@ -381,7 +368,7 @@ self.addEventListener('message', async (event) => {
             code: error.code || 'unknown',
             type: typeof error,
             isNumber: typeof error === 'number',
-            originalError: error
+            originalError: String(error)
         };
         
         // Ajouter des détails spécifiques si disponibles
@@ -421,19 +408,14 @@ self.addEventListener('message', async (event) => {
             userMessage += '\n\nSuggestions:\n- Check your internet connection\n- Try reloading the page\n- Use a more recent browser';
         }
         
-        // Envoyer l'erreur à l'interface utilisateur
-        self.postMessage({
-            type: 'error',
-            message: userMessage,
-            details: errorDetails
-        });
+        postWorkerError(userMessage, errorDetails);
     }
 });
 
 class AutomaticSpeechRecognitionPipelineFactory {
     static task = "automatic-speech-recognition";
     static model = null;
-    static authToken = 'hf_YOUR_HUGGING_FACE_TOKEN'; // TODO: Replace with your token
+    static authToken = getAuthToken();
     static dtype = null;
     static gpu = false;
     static instance = null;
@@ -456,7 +438,7 @@ class AutomaticSpeechRecognitionPipelineFactory {
             try {
                 // Tentative avec WebGPU d'abord si disponible
                 if (this.gpu && env.webgpu) {
-                    console.log('Attempting initialization with WebGPU...');
+                    debugLog('Attempting initialization with WebGPU...');
                     const pipelineOptions = {
                         progress_callback: makeProgressCallback(),
                         use_auth_token: PipelineSingeton.authToken,
@@ -465,7 +447,7 @@ class AutomaticSpeechRecognitionPipelineFactory {
                     };
                     this.instance = await pipeline(this.task, this.model, pipelineOptions);
 
-                    console.log('WebGPU initialized successfully');
+                    debugLog('WebGPU initialized successfully');
                     return this.instance;
                 } else {
                     webgpuError = new Error('WebGPU not available or disabled');
@@ -563,13 +545,13 @@ class AutomaticSpeechRecognitionPipelineFactory {
             
             for (const { name, config } of wasmConfigs) {
                 try {
-                    console.log(`Attempting initialization: ${name}`);
+                    debugLog(`Attempting initialization: ${name}`);
                     this.instance = await pipeline(this.task, this.model, {
                       use_auth_token: AutomaticSpeechRecognitionPipelineFactory.authToken,
                       ...config
                     });
 
-                    console.log(`${name} initialized successfully`);
+                    debugLog(`${name} initialized successfully`);
                     return this.instance;
                 } catch (error) {
                     wasmError = error;
@@ -643,13 +625,14 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
     let interimResult = ""; // Holds the text for the current chunk being processed
 
     const streamer = new WhisperTextStreamer(transcriber.tokenizer, {
+        debug: DEBUG_TRANSCRIPTION,
         time_precision,
         skip_prompt: true,
         decode_kwargs: {
             skip_special_tokens: true,
         },
         on_chunk_start: (x) => {
-            console.log('Chunk started at time:', x);
+            debugLog('Chunk started at time:', x);
             interimResult = ""; // Reset for new chunk
             const offset = (chunk_length_s - stride_length_s) * chunk_count;
             chunks.push({
@@ -660,7 +643,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
             });
         },
         token_callback_function: (x) => {
-            console.log('Token received:', x);
+            debugLog('Token received:', x);
             const perf = (typeof performance !== "undefined" ? performance : { now: () => Date.now() });
             start_time ??= perf.now();
             if (num_tokens++ > 0) {
@@ -672,7 +655,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
 
             // Append text to the interim result
             interimResult += x;
-            console.log('Streaming partial text:', interimResult);
+            debugLog('Streaming partial text:', interimResult);
 
             // Send the partial, real-time result to the main thread more frequently
             if (interimResult && interimResult.trim()) {
@@ -687,7 +670,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
             }
         },
         on_chunk_end: (x) => {
-            console.log('Chunk ended at time:', x);
+            debugLog('Chunk ended at time:', x);
             const current = chunks.at(-1);
             if (current) {
                 current.text = interimResult; // Finalize the text for the chunk
@@ -706,7 +689,7 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
             }
         },
         on_finalize: () => {
-            console.log('Chunk finalized');
+            debugLog('Chunk finalized');
             start_time = null;
             num_tokens = 0;
             ++chunk_count;
@@ -792,34 +775,35 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
             p.gpu = false;
             
             try {
-                console.log('Attempting WASM fallback...');
+                debugLog('Attempting WASM fallback...');
                 const cpuTranscriber = await p.getInstance(null); // Pas de progress_callback pour le fallback
                 output = await cpuTranscriber(audio, params);
-                console.log('WASM fallback successful');
+                debugLog('WASM fallback successful');
             } catch (error2) {
                 console.error('WASM fallback failed:', error2);
-                self.postMessage({
-                    status: "error",
-                    data: {
-                        message: `GPU failed and WASM fallback failed: ${error2.message}`,
+                postWorkerError(
+                    `GPU failed and WASM fallback failed: ${error2.message}`,
+                    {
                         originalGPUError: error.message,
-                        wasmError: error2.message
+                        wasmError: error2.message,
                     },
-                });
+                );
                 return null;
             }
         } else {
-            self.postMessage({
-                status: "error",
-                data: error,
+            postWorkerError(error.message ?? String(error), {
+                message: error.message ?? String(error),
+                name: error.name,
+                code: error.code,
             });
             return null;
         }
     }
 
     // Perform speaker diarization on the final chunks
-    let finalChunks = chunks;
-    let speakerSegments = [];
+    const outputChunks = Array.isArray(output?.chunks) ? output.chunks : [];
+    const finalChunks = chunks.length > 0 ? chunks : outputChunks;
+    const speakerSegments = [];
     
     // DIARIZATION TEMPORAIREMENT DÉSACTIVÉE POUR AMÉLIORER LES PERFORMANCES
     // try {
@@ -839,22 +823,16 @@ const transcribe = async ({ audio, model, dtype, gpu, subtask, language }) => {
     //     });
     // } catch (error) {
     //     console.warn('Speaker diarization failed, proceeding without it:', error);
-        // Send final update without speaker information
-        self.postMessage({
-            status: "complete",
-            data: {
-                text: finalChunks.map(chunk => chunk.text).join("").trim(),
-                chunks: finalChunks,
-                tps,
-                speakerSegments: [],
-            },
-        });
     // }
 
     return {
+        ...output,
+        text:
+            finalChunks.map(chunk => chunk.text).join("").trim() ||
+            output?.text ||
+            "",
         tps,
         chunks: finalChunks,
         speakerSegments,
-        ...output,
     };
 };

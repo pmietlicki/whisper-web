@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, JSX } from "react";
+import React, { useEffect, useState, useCallback, useRef, useId, JSX } from "react";
 import axios from "axios";
 import Modal from "./modal/Modal";
 import { UrlInput } from "./modal/UrlInput";
@@ -18,7 +18,6 @@ import { Trans, useTranslation } from "react-i18next";
 import {
     FastAudioProcessor,
     AudioQualityMetrics,
-    detectAudioFormat,
 } from '../utils/FastAudioUtils';
 
 function titleCase(str: string) {
@@ -28,6 +27,18 @@ function titleCase(str: string) {
             return word.charAt(0).toUpperCase() + word.slice(1);
         })
         .join("");
+}
+
+async function decodeAudioData(data: ArrayBuffer): Promise<AudioBuffer> {
+    const audioCTX = new AudioContext({
+        sampleRate: Constants.SAMPLING_RATE,
+    });
+
+    try {
+        return await audioCTX.decodeAudioData(data.slice(0));
+    } finally {
+        void audioCTX.close();
+    }
 }
 
 interface AudioManagerProps {
@@ -64,24 +75,17 @@ export default function AudioManager(props: AudioManagerProps) {
         setUrlError(undefined);
     };
 
-    const setAudioFromDownload = async (
+    const setAudioFromDownload = useCallback(async (
         data: ArrayBuffer,
         mimeType: string,
     ) => {
         setIsProcessingAudio(true);
         
         try {
-            // Detect audio format for better processing
-            const detectedFormat = detectAudioFormat(mimeType);
-            console.log(`Detected audio format: ${detectedFormat}`);
-            
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
             const blobUrl = URL.createObjectURL(
                 new Blob([data], { type: "audio/*" }),
             );
-            const decoded = await audioCTX.decodeAudioData(data);
+            const decoded = await decodeAudioData(data);
             
             // Apply fast audio processing
             const { processedBuffer, metrics } = await audioProcessor.processAudioBuffer(decoded);
@@ -94,18 +98,13 @@ export default function AudioManager(props: AudioManagerProps) {
                 mimeType: mimeType,
                 metrics: metrics,
             });
-            
-            console.log('Audio quality metrics:', metrics);
         } catch (error) {
             console.error('Error processing audio:', error);
             // Fallback to original processing
-            const audioCTX = new AudioContext({
-                sampleRate: Constants.SAMPLING_RATE,
-            });
             const blobUrl = URL.createObjectURL(
                 new Blob([data], { type: "audio/*" }),
             );
-            const decoded = await audioCTX.decodeAudioData(data);
+            const decoded = await decodeAudioData(data);
             setAudioData({
                 buffer: decoded,
                 url: blobUrl,
@@ -115,7 +114,7 @@ export default function AudioManager(props: AudioManagerProps) {
         } finally {
             setIsProcessingAudio(false);
         }
-    };
+    }, [audioProcessor]);
 
     const setAudioFromRecording = async (data: Blob) => {
         resetAudio();
@@ -130,15 +129,8 @@ export default function AudioManager(props: AudioManagerProps) {
         fileReader.onloadend = async () => {
             try {
                 const arrayBuffer = fileReader.result as ArrayBuffer;
-                
-                // Detect audio format
-                const detectedFormat = detectAudioFormat(data.type);
-                console.log(`Detected recording format: ${detectedFormat}`);
-                
-                const audioCTX = new AudioContext({
-                    sampleRate: Constants.SAMPLING_RATE,
-                });
-                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+
+                const decoded = await decodeAudioData(arrayBuffer);
                 
                 // Apply optimized audio processing
                 const { processedBuffer, metrics } = await audioProcessor.processAudioBuffer(decoded);
@@ -152,16 +144,11 @@ export default function AudioManager(props: AudioManagerProps) {
                     mimeType: data.type,
                     metrics: metrics,
                 });
-                
-                console.log('Recording quality metrics:', metrics);
             } catch (error) {
                 console.error('Error processing recording:', error);
                 // Fallback to original processing
-                const audioCTX = new AudioContext({
-                    sampleRate: Constants.SAMPLING_RATE,
-                });
                 const arrayBuffer = fileReader.result as ArrayBuffer;
-                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                const decoded = await decodeAudioData(arrayBuffer);
                 setProgress(undefined);
                 setAudioData({
                     buffer: decoded,
@@ -201,30 +188,50 @@ export default function AudioManager(props: AudioManagerProps) {
                     if (!mimeType || mimeType === "audio/wave") {
                         mimeType = "audio/wav";
                     }
-                    setAudioFromDownload(data, mimeType);
-                } catch (error: any) {
-                    console.log("Request failed or aborted", error);
+                    await setAudioFromDownload(data, mimeType);
+                } catch (error: unknown) {
                     setProgress(undefined);
-                    
+
+                    if (
+                        axios.isCancel(error) ||
+                        (error instanceof Error &&
+                            (error.name === "AbortError" ||
+                                error.name === "CanceledError" ||
+                                "code" in error && error.code === "ERR_CANCELED"))
+                    ) {
+                        return;
+                    }
+
                     // Déterminer le type d'erreur et afficher un message approprié
                     let errorMessage = t("manager.url_error_generic");
-                    
-                    if (error.code === "ERR_NETWORK" || error.message?.includes("CORS")) {
+
+                    if (axios.isAxiosError(error)) {
+                        if (
+                            error.code === "ERR_NETWORK" ||
+                            error.message.includes("CORS")
+                        ) {
+                            errorMessage = t("manager.url_error_cors");
+                        } else if (error.response?.status === 404) {
+                            errorMessage = t("manager.url_error_not_found");
+                        } else if (
+                            error.response?.status !== undefined &&
+                            error.response.status >= 400 &&
+                            error.response.status < 500
+                        ) {
+                            errorMessage = t("manager.url_error_access");
+                        }
+                    } else if (
+                        error instanceof Error &&
+                        error.message.includes("CORS")
+                    ) {
                         errorMessage = t("manager.url_error_cors");
-                    } else if (error.response?.status === 404) {
-                        errorMessage = t("manager.url_error_not_found");
-                    } else if (error.response?.status >= 400 && error.response?.status < 500) {
-                        errorMessage = t("manager.url_error_access");
-                    } else if (error.name === "AbortError") {
-                        // Ne pas afficher d'erreur si la requête a été annulée
-                        return;
                     }
                     
                     setUrlError(errorMessage);
                 }
             }
         },
-        [audioDownloadUrl],
+        [audioDownloadUrl, setAudioFromDownload],
     );
 
     // When URL changes or download is triggered, download audio
@@ -237,6 +244,14 @@ export default function AudioManager(props: AudioManagerProps) {
             };
         }
     }, [audioDownloadUrl, downloadAudioFromUrl, downloadTrigger]);
+
+    useEffect(() => {
+        return () => {
+            if (audioData?.url) {
+                URL.revokeObjectURL(audioData.url);
+            }
+        };
+    }, [audioData?.url]);
 
     return (
         <>
@@ -292,9 +307,13 @@ export default function AudioManager(props: AudioManagerProps) {
                 
                 {/* Audio Processing Status */}
                 {isProcessingAudio && (
-                    <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700'>
+                    <div
+                        className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700'
+                        role='status'
+                        aria-live='polite'
+                    >
                         <div className='flex items-center'>
-                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2'></div>
+                            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700 mr-2' aria-hidden='true'></div>
                             {t("manager.processing_audio")}
                         </div>
                     </div>
@@ -302,23 +321,26 @@ export default function AudioManager(props: AudioManagerProps) {
                 
                 {/* Audio Quality Metrics */}
                 {processingMetrics && audioData && (
-                    <div className='mt-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm'>
+                    <section
+                        className='mt-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm'
+                        aria-label={t("manager.audio_quality")}
+                    >
                         <div className='font-medium text-green-800 mb-2'>{t("manager.audio_quality")}</div>
-                        <div className='grid grid-cols-2 gap-2 text-green-700'>
-                            <div>SNR: {processingMetrics.snr.toFixed(1)} dB</div>
-                            <div>RMS: {(processingMetrics.rms * 100).toFixed(1)}%</div>
-                            <div>Peak: {(processingMetrics.peak * 100).toFixed(1)}%</div>
-                            <div>Duration: {processingMetrics.duration.toFixed(1)}s</div>
-                        </div>
-                    </div>
+                        <dl className='grid grid-cols-2 gap-2 text-green-700'>
+                            <div><dt className='inline'>SNR:</dt> <dd className='inline'>{processingMetrics.snr.toFixed(1)} dB</dd></div>
+                            <div><dt className='inline'>RMS:</dt> <dd className='inline'>{(processingMetrics.rms * 100).toFixed(1)}%</dd></div>
+                            <div><dt className='inline'>Peak:</dt> <dd className='inline'>{(processingMetrics.peak * 100).toFixed(1)}%</dd></div>
+                            <div><dt className='inline'>Duration:</dt> <dd className='inline'>{processingMetrics.duration.toFixed(1)}s</dd></div>
+                        </dl>
+                    </section>
                 )}
             </div>
 
             {urlError && (
-                <div className='mt-4 p-4 bg-red-50 border border-red-200 rounded-lg'>
+                <div className='mt-4 p-4 bg-red-50 border border-red-200 rounded-lg' role='alert'>
                     <div className='flex items-center'>
                         <div className='flex-shrink-0'>
-                            <svg className='h-5 w-5 text-red-400' viewBox='0 0 20 20' fill='currentColor'>
+                            <svg className='h-5 w-5 text-red-400' viewBox='0 0 20 20' fill='currentColor' aria-hidden='true'>
                                 <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clipRule='evenodd' />
                             </svg>
                         </div>
@@ -327,15 +349,25 @@ export default function AudioManager(props: AudioManagerProps) {
                         </div>
                         <div className='ml-auto pl-3'>
                             <button
+                                type='button'
                                 onClick={() => setUrlError(undefined)}
+                                aria-label={t("manager.dismiss_error")}
                                 className='inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600'
                             >
-                                <svg className='h-4 w-4' viewBox='0 0 20 20' fill='currentColor'>
+                                <svg className='h-4 w-4' viewBox='0 0 20 20' fill='currentColor' aria-hidden='true'>
                                     <path fillRule='evenodd' d='M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z' clipRule='evenodd' />
                                 </svg>
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {props.transcriber.error && (
+                <div className='mt-4 p-4 bg-red-50 border border-red-200 rounded-lg' role='alert'>
+                    <p className='text-sm text-red-800'>
+                        {props.transcriber.error}
+                    </p>
                 </div>
             )}
 
@@ -359,8 +391,8 @@ export default function AudioManager(props: AudioManagerProps) {
                         />
                     </div>
                     {props.transcriber.progressItems.length > 0 && (
-                        <div className='relative z-10 p-4 w-full text-center'>
-                            <label>{t("manager.loading")}</label>
+                        <div className='relative z-10 p-4 w-full text-center' role='status' aria-live='polite'>
+                            <p className='mb-2'>{t("manager.loading")}</p>
                             {props.transcriber.progressItems.map((data, index) => (
                                 <div key={`${data.file}-${index}`}>
                                     <Progress
@@ -485,7 +517,11 @@ function InfoTile(props: {
 
     return (
         <div className={props.className}>
-            <Tile icon={props.icon} onClick={onClick} />
+            <Tile
+                icon={props.icon}
+                onClick={onClick}
+                ariaLabel={props.title}
+            />
             <Modal
                 show={showModal}
                 submitEnabled={false}
@@ -518,7 +554,11 @@ function SettingsTile(props: {
 
     return (
         <div className={props.className}>
-            <Tile icon={props.icon} onClick={onClick} />
+            <Tile
+                icon={props.icon}
+                onClick={onClick}
+                ariaLabel={t("manager.settings")}
+            />
             <SettingsModal
                 show={showModal}
                 onSubmit={onSubmit}
@@ -536,6 +576,11 @@ function SettingsModal(props: {
     transcriber: Transcriber;
 }) {
     const names = Object.values(LANGUAGES).map(titleCase);
+    const modelSelectId = useId();
+    const dtypeSelectId = useId();
+    const languageSelectId = useId();
+    const taskSelectId = useId();
+    const gpuInputId = useId();
 
     const [isMultilingual, setIsMultilingual] = useState(false);
 
@@ -550,7 +595,7 @@ function SettingsModal(props: {
 
     const [cacheSize, setCacheSize] = useState<number>(0);
 
-    async function fetchCacheSize() {
+    const fetchCacheSize = useCallback(async () => {
         if ("storage" in navigator && "estimate" in navigator.storage) {
             const estimate = await navigator.storage.estimate();
             const usage = Number(estimate.usage);
@@ -558,9 +603,13 @@ function SettingsModal(props: {
         } else {
             setCacheSize(-1);
         }
-    }
+    }, []);
 
-    fetchCacheSize();
+    useEffect(() => {
+        if (props.show) {
+            fetchCacheSize();
+        }
+    }, [fetchCacheSize, props.show]);
 
     // Get the language code of the selected model
     const getModelLanguage = () => {
@@ -577,8 +626,9 @@ function SettingsModal(props: {
             title={t("manager.settings")}
             content={
                 <>
-                    <label>{t("manager.select_model")}</label>
+                    <label htmlFor={modelSelectId}>{t("manager.select_model")}</label>
                     <select
+                        id={modelSelectId}
                         className='mt-1 mb-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
                         value={props.transcriber.model}
                         onChange={(e) => {
@@ -623,9 +673,11 @@ function SettingsModal(props: {
                             </optgroup>
                         ))}
                     </select>
+                    <label htmlFor={dtypeSelectId}>{t("manager.select_quantization")}</label>
                     <select
+                        id={dtypeSelectId}
                         className='mt-1 mb-1 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500'
-                        defaultValue={props.transcriber.dtype}
+                        value={props.transcriber.dtype}
                         onChange={(e) => {
                             props.transcriber.setDtype(e.target.value);
                         }}
@@ -639,7 +691,7 @@ function SettingsModal(props: {
                     <div className='flex justify-between items-center mb-3 px-1'>
                         <div className='flex'>
                             <input
-                                id='gpu'
+                                id={gpuInputId}
                                 type='checkbox'
                                 checked={props.transcriber.gpu}
                                 disabled={!IS_WEBGPU_AVAILABLE}
@@ -647,7 +699,7 @@ function SettingsModal(props: {
                                     props.transcriber.setGPU(e.target.checked);
                                 }}
                             ></input>
-                            <label htmlFor={"gpu"} className='ms-1'>
+                            <label htmlFor={gpuInputId} className='ms-1'>
                                 {IS_WEBGPU_AVAILABLE
                                     ? t("manager.gpu")
                                     : t("manager.gpu_disabled")}
@@ -655,8 +707,9 @@ function SettingsModal(props: {
                         </div>
                     </div>
 
-                    <label>{t("manager.select_language")}</label>
+                    <label htmlFor={languageSelectId}>{t("manager.select_language")}</label>
                     <select
+                        id={languageSelectId}
                         className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed'
                         value={
                             isMultilingual
@@ -675,8 +728,9 @@ function SettingsModal(props: {
                         ))}
                     </select>
 
-                    <label>{t("manager.select_task")}</label>
+                    <label htmlFor={taskSelectId}>{t("manager.select_task")}</label>
                     <select
+                        id={taskSelectId}
                         className='mt-1 mb-3 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed'
                         value={
                             isMultilingual
@@ -705,19 +759,29 @@ function SettingsModal(props: {
 }
 
 function VerticalBar() {
-    return <div className='w-[1px] bg-slate-200'></div>;
+    return <div className='w-[1px] bg-slate-200' aria-hidden='true'></div>;
 }
 
 function AudioDataBar(props: { progress: number }) {
-    return <ProgressBar progress={`${Math.round(props.progress * 100)}%`} />;
+    return <ProgressBar progress={props.progress} />;
 }
 
-function ProgressBar(props: { progress: string }) {
+function ProgressBar(props: { progress: number }) {
+    const percentage = Math.round(Math.max(0, Math.min(1, props.progress)) * 100);
+
     return (
-        <div className='w-full rounded-full h-1 bg-gray-200 dark:bg-gray-700'>
+        <div
+            className='w-full rounded-full h-1 bg-gray-200 dark:bg-gray-700'
+            role='progressbar'
+            aria-label={t("manager.audio_load_progress")}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percentage}
+            aria-valuetext={`${percentage}%`}
+        >
             <div
                 className='bg-blue-600 h-1 rounded-full transition-all duration-100'
-                style={{ width: props.progress }}
+                style={{ width: `${percentage}%` }}
             ></div>
         </div>
     );
@@ -757,6 +821,7 @@ function UrlModal(props: {
 }) {
     const { i18n } = useTranslation();
     const [url, setUrl] = useState(Constants.getDefaultAudioUrl(i18n.language));
+    const urlInputId = useId();
 
     useEffect(() => {
         setUrl(Constants.getDefaultAudioUrl(i18n.language));
@@ -777,7 +842,10 @@ function UrlModal(props: {
             content={
                 <>
                     {t("manager.from_url_description")}
-                    <UrlInput onChange={onChange} value={url} />
+                    <label htmlFor={urlInputId} className='mt-3 block text-sm font-medium text-gray-700'>
+                        {t("manager.audio_url")}
+                    </label>
+                    <UrlInput id={urlInputId} onChange={onChange} value={url} />
                 </>
             }
             onClose={props.onClose}
@@ -797,13 +865,11 @@ function FileTile(props: {
         metrics?: AudioQualityMetrics,
     ) => void;
 }) {
-    // Create hidden input element
-    const elem = document.createElement("input");
-    elem.type = "file";
-    elem.accept = "audio/*,video/*";
-    elem.oninput = async (event) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         // Make sure we have files to use
-        const files = (event.target as HTMLInputElement).files;
+        const files = event.currentTarget.files;
         if (!files) return;
 
         // Create a blob that we can use as an src for our audio element
@@ -816,44 +882,41 @@ function FileTile(props: {
             if (!arrayBuffer) return;
 
             try {
-                // Detect audio format
-                const detectedFormat = detectAudioFormat(mimeType);
-                console.log(`Detected file format: ${detectedFormat}`);
-
-                const audioCTX = new AudioContext({
-                    sampleRate: Constants.SAMPLING_RATE,
-                });
-
-                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                const decoded = await decodeAudioData(arrayBuffer);
                 
                 // Apply fast audio processing
                 const processor = new FastAudioProcessor();
                 const { processedBuffer, metrics } = await processor.processAudioBuffer(decoded);
-                
-                console.log('File quality metrics:', metrics);
+
                 props.onFileUpdate(processedBuffer, urlObj, mimeType, metrics);
             } catch (error) {
                 console.error('Error processing file:', error);
                 // Fallback to original processing
-                const audioCTX = new AudioContext({
-                    sampleRate: Constants.SAMPLING_RATE,
-                });
-                const decoded = await audioCTX.decodeAudioData(arrayBuffer);
+                const decoded = await decodeAudioData(arrayBuffer);
                 props.onFileUpdate(decoded, urlObj, mimeType);
             }
         });
         reader.readAsArrayBuffer(files[0]);
 
         // Reset files
-        elem.value = "";
+        event.currentTarget.value = "";
     };
 
     return (
-        <Tile
-            icon={props.icon}
-            text={props.text}
-            onClick={() => elem.click()}
-        />
+        <>
+            <input
+                ref={inputRef}
+                type='file'
+                accept='audio/*,video/*'
+                className='sr-only'
+                onChange={onFileChange}
+            />
+            <Tile
+                icon={props.icon}
+                text={props.text}
+                onClick={() => inputRef.current?.click()}
+            />
+        </>
     );
 }
 
@@ -940,16 +1003,19 @@ function RecordModal(props: {
 function Tile(props: {
     icon: JSX.Element;
     text?: string;
+    ariaLabel?: string;
     onClick?: () => void;
 }) {
     return (
         <button
+            type='button'
             onClick={props.onClick}
-            className='flex items-center justify-center rounded-lg p-2 bg-blue text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200 mr-0'
+            aria-label={props.ariaLabel ?? props.text}
+            className='flex items-center justify-center rounded-lg p-2 bg-white text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-all duration-200 mr-0'
         >
-            <div className='w-7 h-7'>{props.icon}</div>
+            <div className='w-7 h-7' aria-hidden='true'>{props.icon}</div>
             {props.text && (
-                <div className='ml-2 break-text text-center text-md mw-30'>
+                <div className='ml-2 break-words text-center text-sm sm:text-base max-w-[7.5rem]'>
                     {props.text}
                 </div>
             )}

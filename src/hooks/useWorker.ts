@@ -1,12 +1,25 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface MessageEventHandler {
     (event: MessageEvent): void;
 }
 
 export function useWorker(messageEventHandler: MessageEventHandler): Worker {
+    const messageEventHandlerRef = useRef(messageEventHandler);
+
+    useEffect(() => {
+        messageEventHandlerRef.current = messageEventHandler;
+    }, [messageEventHandler]);
+
     // Create new worker once and never again
-    const [worker] = useState(() => createWorker(messageEventHandler));
+    const [worker] = useState(() =>
+        createWorker((event) => messageEventHandlerRef.current(event)),
+    );
+
+    useEffect(() => {
+        return () => worker.terminate();
+    }, [worker]);
+
     return worker;
 }
 

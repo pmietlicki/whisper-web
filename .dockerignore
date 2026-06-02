@@ -1,0 +1,12 @@
+.git
+.github
+.agents
+.codex
+node_modules
+dist
+dist-ssr
+whisper-speaker-diarization
+*.log
+*.tsbuildinfo
+.env
+Dockerfile

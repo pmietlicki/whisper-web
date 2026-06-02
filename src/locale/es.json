@@ -4,7 +4,10 @@
             "title": "Whisper Web",
             "subtitle": "¡Transcribe el habla directamente en tu navegador!",
             "footer": "La transcripción se realiza localmente en tu navegador. Tus datos se quedan privados.",
-            "footer_credits": "Creado por <authorLink>Pierre Mesure</authorLink> basado en una demostración de <demoLink>Xenova</demoLink> ♥️"
+            "footer_credits": "Creado por <authorLink>Pierre Mesure</authorLink> basado en una demostración de <demoLink>Xenova</demoLink> ♥️",
+            "skip_to_content": "Saltar al contenido principal",
+            "webgpu_not_supported_1": "WebGPU no es compatible",
+            "webgpu_not_supported_2": "con este navegador :("
         },
         "modal": {
             "close": "Cerrar"
@@ -12,6 +15,7 @@
         "manager": {
             "loading": "Cargando archivos de modelo... (solo se ejecuta una vez)",
             "select_model": "Selecciona el modelo a usar.",
+            "select_quantization": "Selecciona el nivel de cuantización.",
             "select_language": "Selecciona el idioma de origen.",
             "select_task": "Selecciona la tarea a realizar.",
             "transcribe": "Transcribir",
@@ -27,6 +31,11 @@
             "url_error_cors": "No se puede cargar el archivo de audio: la URL no permite el acceso desde este sitio (error CORS).",
             "url_error_not_found": "Archivo de audio no encontrado en la URL especificada.",
             "url_error_access": "Acceso denegado al archivo de audio en la URL especificada.",
+            "dismiss_error": "Descartar error",
+            "audio_load_progress": "Progreso de carga de audio",
+            "audio_url": "URL del archivo de audio",
+            "audio_player": "Reproductor de audio",
+            "video_player": "Reproductor de vídeo",
             "gpu": "GPU",
             "gpu_disabled": "GPU (navegador no compatible)",
             "clear_cache": "Borrar caché",
@@ -37,7 +46,9 @@
         },
         "recorder": {
             "start_recording": "Iniciar grabación",
-            "stop_recording": "Detener grabación ({{duration}})"
+            "stop_recording": "Detener grabación ({{duration}})",
+            "recording_error": "No se puede acceder al micrófono. Comprueba los permisos del navegador.",
+            "recording_preview": "Vista previa del audio grabado"
         },
         "transcribe_button": {
             "loading_model": "Cargando modelo...",
@@ -46,13 +57,20 @@
         },
         "transcript": {
             "export": "Exportar",
+            "export_as": "Exportar como",
+            "export_group_label": "Formatos de exportación de la transcripción",
+            "export_format": "Exportar la transcripción como {{format}}",
             "tokens_per_second": "tokens/segundo",
+            "total_chunks": "segmentos",
+            "speaker_turns": "turnos de habla",
             "view_mode": "Modo de vista",
             "chunks_view": "Vista por segmentos",
             "speakers_view": "Vista por hablantes",
             "auto_scroll": "Desplazamiento automático",
             "speakers_detected": "{{count}} hablantes detectados",
             "unknown_speaker": "Hablante desconocido",
+            "transcript_region": "Transcripción",
+            "seek_to_timestamp": "Ir a {{time}}: {{text}}",
             "transcribing_in_progress": "En progreso...",
             "real_time_transcription": "Transcripción en tiempo real:"
         },

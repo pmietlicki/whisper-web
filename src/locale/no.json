@@ -4,7 +4,10 @@
             "title": "Whisper Web",
             "subtitle": "Transkribere tale direkte i nettleseren din!",
             "footer": "Transkriberingen utføres lokalt på enheten din. Ingen data sendes noe sted.",
-            "footer_credits": "Laget av <authorLink>Pierre Mesure</authorLink> basert på en demo av <demoLink>Xenova</demoLink> ♥️"
+            "footer_credits": "Laget av <authorLink>Pierre Mesure</authorLink> basert på en demo av <demoLink>Xenova</demoLink> ♥️",
+            "skip_to_content": "Hopp til hovedinnhold",
+            "webgpu_not_supported_1": "WebGPU støttes ikke",
+            "webgpu_not_supported_2": "av denne nettleseren :("
         },
         "modal": {
             "close": "Lukk"
@@ -12,6 +15,7 @@
         "manager": {
             "loading": "Laster modellfiler... (kjøres bare én gang)",
             "select_model": "Velg modellen som skal brukes.",
+            "select_quantization": "Velg kvantiseringsnivå.",
             "select_language": "Velg kildespråk.",
             "select_task": "Velg oppgave.",
             "transcribe": "Transkribere",
@@ -27,6 +31,11 @@
             "url_error_cors": "Kan ikke laste lydfil: URL tillater ikke tilgang fra dette nettstedet (CORS-feil).",
             "url_error_not_found": "Lydfil ikke funnet på den angitte URL-en.",
             "url_error_access": "Tilgang nektet til lydfil på den angitte URL-en.",
+            "dismiss_error": "Lukk feilmelding",
+            "audio_load_progress": "Fremdrift for lydlasting",
+            "audio_url": "URL til lydfil",
+            "audio_player": "Lydspiller",
+            "video_player": "Videospiller",
             "gpu": "GPU",
             "gpu_disabled": "GPU (ikke kompatibel med nettleseren)",
             "clear_cache": "Tøm hurtigbuffer",
@@ -37,7 +46,9 @@
         },
         "recorder": {
             "start_recording": "Start opptak",
-            "stop_recording": "Stopp opptak ({{duration}})"
+            "stop_recording": "Stopp opptak ({{duration}})",
+            "recording_error": "Får ikke tilgang til mikrofonen. Kontroller nettlesertillatelsene.",
+            "recording_preview": "Forhåndsvisning av opptaket"
         },
         "transcribe_button": {
             "loading_model": "Laster modell...",
@@ -46,13 +57,20 @@
         },
         "transcript": {
             "export": "Eksporter",
+            "export_as": "Eksporter som",
+            "export_group_label": "Eksportformater for transkripsjonen",
+            "export_format": "Eksporter transkripsjonen som {{format}}",
             "tokens_per_second": "tokens/sekund",
+            "total_chunks": "segmenter",
+            "speaker_turns": "talerbytter",
             "view_mode": "Visningsmodus",
             "chunks_view": "Segmentvisning",
             "speakers_view": "Talevisning",
             "auto_scroll": "Automatisk rulling",
             "speakers_detected": "{{count}} talere oppdaget",
             "unknown_speaker": "Ukjent taler",
+            "transcript_region": "Transkripsjon",
+            "seek_to_timestamp": "Gå til {{time}}: {{text}}",
             "transcribing_in_progress": "Pågår...",
             "real_time_transcription": "Sanntidstranskribering:"
         },

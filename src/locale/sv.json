@@ -4,7 +4,10 @@
             "title": "Whisper Web",
             "subtitle": "Transkribera tal direkt i din webbläsare!",
             "footer": "Transkriberingen utförs lokalt på din enhet. Inga uppgifter skickas någonstans.",
-            "footer_credits": "Skapad av <authorLink>Pierre Mesure</authorLink> basert på en demo av <demoLink>Xenova</demoLink> ♥️"
+            "footer_credits": "Skapad av <authorLink>Pierre Mesure</authorLink> basert på en demo av <demoLink>Xenova</demoLink> ♥️",
+            "skip_to_content": "Hoppa till huvudinnehåll",
+            "webgpu_not_supported_1": "WebGPU stöds inte",
+            "webgpu_not_supported_2": "av den här webbläsaren :("
         },
         "modal": {
             "close": "Stäng"
@@ -12,6 +15,7 @@
         "manager": {
             "loading": "Laddar modellfiler... (körs endast en gång)",
             "select_model": "Välj den modell som ska användas.",
+            "select_quantization": "Välj kvantiseringsnivå.",
             "select_language": "Välj källspråk.",
             "select_task": "Välj uppgift.",
             "transcribe": "Transkribera",
@@ -27,6 +31,11 @@
             "url_error_cors": "Kan inte ladda ljudfil: URL tillåter inte åtkomst från denna webbplats (CORS-fel).",
             "url_error_not_found": "Ljudfil hittades inte på den angivna URL:en.",
             "url_error_access": "Åtkomst nekad till ljudfil på den angivna URL:en.",
+            "dismiss_error": "Stäng felmeddelande",
+            "audio_load_progress": "Laddningsförlopp för ljud",
+            "audio_url": "URL till ljudfil",
+            "audio_player": "Ljudspelare",
+            "video_player": "Videospelare",
             "gpu": "GPU",
             "gpu_disabled": "GPU (ej kompatibel med webbläsaren)",
             "clear_cache": "Rensa cache",
@@ -37,7 +46,9 @@
         },
         "recorder": {
             "start_recording": "Starta inspelning",
-            "stop_recording": "Stoppa inspelning ({{duration}})"
+            "stop_recording": "Stoppa inspelning ({{duration}})",
+            "recording_error": "Det går inte att komma åt mikrofonen. Kontrollera webbläsarens behörigheter.",
+            "recording_preview": "Förhandsgranskning av inspelat ljud"
         },
         "transcribe_button": {
             "loading_model": "Laddar modell...",
@@ -46,13 +57,20 @@
         },
         "transcript": {
             "export": "Exportera",
+            "export_as": "Exportera som",
+            "export_group_label": "Exportformat för transkriptionen",
+            "export_format": "Exportera transkriptionen som {{format}}",
             "tokens_per_second": "tokens/sekund",
+            "total_chunks": "segment",
+            "speaker_turns": "talarbyten",
             "view_mode": "Visningsläge",
             "chunks_view": "Segmentvy",
             "speakers_view": "Talarvy",
             "auto_scroll": "Automatisk rullning",
             "speakers_detected": "{{count}} talare upptäckta",
             "unknown_speaker": "Okänd talare",
+            "transcript_region": "Transkription",
+            "seek_to_timestamp": "Gå till {{time}}: {{text}}",
             "transcribing_in_progress": "Pågår...",
             "real_time_transcription": "Realtidstranskription:"
         },

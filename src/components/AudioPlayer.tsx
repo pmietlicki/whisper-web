@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback } from "react";
+import { t } from "i18next";
 
 interface AudioPlayerProps {
     audioUrl: string;
@@ -12,11 +13,9 @@ export default function AudioPlayer({
     audioUrl,
     mimeType,
     onTimeUpdate,
-    onSeek,
     currentTime
 }: AudioPlayerProps) {
     const mediaPlayer = useRef<HTMLAudioElement | HTMLVideoElement>(null);
-    const mediaSource = useRef<HTMLSourceElement>(null);
     // Détermine si c'est une vidéo
     const isVideo = mimeType.startsWith('video/');
 
@@ -26,16 +25,6 @@ export default function AudioPlayer({
             onTimeUpdate(mediaPlayer.current.currentTime);
         }
     }, [onTimeUpdate]);
-
-    // Handle seeking
-    const handleSeek = useCallback((time: number) => {
-        if (mediaPlayer.current) {
-            mediaPlayer.current.currentTime = time;
-            if (onSeek) {
-                onSeek(time);
-            }
-        }
-    }, [onSeek]);
 
     // Handle external seek requests
     useEffect(() => {
@@ -50,8 +39,7 @@ export default function AudioPlayer({
 
     // Updates src when url changes
     useEffect(() => {
-        if (mediaPlayer.current && mediaSource.current) {
-            mediaSource.current.src = audioUrl;
+        if (mediaPlayer.current) {
             mediaPlayer.current.load();
         }
     }, [audioUrl]);
@@ -68,13 +56,6 @@ export default function AudioPlayer({
         };
     }, [handleTimeUpdate]);
 
-    // Expose seek function
-    useEffect(() => {
-        if (mediaPlayer.current) {
-            (mediaPlayer.current as any).seekTo = handleSeek;
-        }
-    }, [handleSeek]);
-
     return (
         <div className='sticky bottom-0 w-full p-4 bg-white border-t border-slate-200 shadow-lg z-50 mt-8'>
             <div className='w-full max-w-4xl mx-auto'>
@@ -82,17 +63,19 @@ export default function AudioPlayer({
                     <video
                         ref={mediaPlayer as React.RefObject<HTMLVideoElement>}
                         controls
+                        aria-label={t("manager.video_player")}
                         className='w-full max-h-96 rounded-lg bg-black shadow-xl shadow-black/5 ring-1 ring-slate-700/10'
                     >
-                        <source ref={mediaSource} type={mimeType}></source>
+                        <source src={audioUrl} type={mimeType}></source>
                     </video>
                 ) : (
                     <audio
                         ref={mediaPlayer as React.RefObject<HTMLAudioElement>}
                         controls
+                        aria-label={t("manager.audio_player")}
                         className='w-full h-14 rounded-lg bg-white shadow-xl shadow-black/5 ring-1 ring-slate-700/10'
                     >
-                        <source ref={mediaSource} type={mimeType}></source>
+                        <source src={audioUrl} type={mimeType}></source>
                     </audio>
                 )}
             </div>

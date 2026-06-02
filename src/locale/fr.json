@@ -5,6 +5,7 @@
             "subtitle": "Transcrivez la parole directement dans votre navigateur !",
             "footer": "La transcription est effectuée localement sur votre appareil. Vos données restent privées.",
             "footer_credits": "Créé par <authorLink>Pierre Mesure</authorLink> basé sur une démo de <demoLink>Xenova</demoLink> ♥️",
+            "skip_to_content": "Aller au contenu principal",
             "webgpu_not_supported_1": "WebGPU n'est pas supporté",
             "webgpu_not_supported_2": "par ce navigateur :("
         },
@@ -14,6 +15,7 @@
         "manager": {
             "loading": "Chargement des fichiers du modèle... (une seule fois)",
             "select_model": "Sélectionnez le modèle à utiliser.",
+            "select_quantization": "Sélectionnez le niveau de quantification.",
             "select_language": "Sélectionnez la langue source.",
             "select_task": "Sélectionnez la tâche à effectuer.",
             "transcribe": "Transcrire",
@@ -29,6 +31,11 @@
             "url_error_cors": "Impossible de charger le fichier audio : l'URL ne permet pas l'accès depuis ce site (erreur CORS).",
             "url_error_not_found": "Fichier audio introuvable à l'URL spécifiée.",
             "url_error_access": "Accès refusé au fichier audio à l'URL spécifiée.",
+            "dismiss_error": "Ignorer l'erreur",
+            "audio_load_progress": "Progression du chargement audio",
+            "audio_url": "URL du fichier audio",
+            "audio_player": "Lecteur audio",
+            "video_player": "Lecteur vidéo",
             "gpu": "GPU",
             "gpu_disabled": "GPU (navigateur non supporté)",
             "clear_cache": "Vider le cache",
@@ -39,7 +46,9 @@
         },
         "recorder": {
             "start_recording": "Démarrer l'enregistrement",
-            "stop_recording": "Arrêter l'enregistrement ({{duration}})"
+            "stop_recording": "Arrêter l'enregistrement ({{duration}})",
+            "recording_error": "Impossible d'accéder au microphone. Vérifiez les permissions du navigateur.",
+            "recording_preview": "Aperçu de l'audio enregistré"
         },
         "transcribe_button": {
             "loading_model": "Chargement du modèle...",
@@ -48,13 +57,20 @@
         },
         "transcript": {
             "export": "Exporter",
+            "export_as": "Exporter en",
+            "export_group_label": "Formats d'export de la transcription",
+            "export_format": "Exporter la transcription en {{format}}",
             "tokens_per_second": "tokens/seconde",
+            "total_chunks": "segments",
+            "speaker_turns": "tours de parole",
             "view_mode": "Mode d'affichage",
             "chunks_view": "Vue par segments",
             "speakers_view": "Vue par locuteurs",
             "auto_scroll": "Défilement automatique",
             "speakers_detected": "{{count}} locuteurs détectés",
             "unknown_speaker": "Locuteur inconnu",
+            "transcript_region": "Transcription",
+            "seek_to_timestamp": "Aller à {{time}} : {{text}}",
             "transcribing_in_progress": "En cours...",
             "real_time_transcription": "Transcription en temps réel:"
         },

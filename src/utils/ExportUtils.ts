@@ -1,6 +1,11 @@
 import { TranscriberData } from "../hooks/useTranscriber";
 import {  formatSrtTimeRange } from "./AudioUtils";
 
+interface SpeakerGroup {
+    speaker: string;
+    chunks: Array<{ text: string }>;
+}
+
 export const saveBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -10,7 +15,7 @@ export const saveBlob = (blob: Blob, filename: string) => {
     URL.revokeObjectURL(url);
 };
 
-export const exportTXT = (transcribedData: TranscriberData | undefined, viewMode: 'chunks' | 'speakers', speakerGroups: any[]) => {
+export const exportTXT = (transcribedData: TranscriberData | undefined, viewMode: 'chunks' | 'speakers', speakerGroups: SpeakerGroup[]) => {
     const chunks = transcribedData?.chunks ?? [];
     let text = "";
     

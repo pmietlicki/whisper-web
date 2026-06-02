@@ -5,6 +5,7 @@
             "subtitle": "Transcribe speech directly in your browser!",
             "footer": "The transcription is performed locally on your device. Your data remains private.",
             "footer_credits": "Created by <authorLink>Pierre Mesure</authorLink> based on a demo by <demoLink>Xenova</demoLink> ♥️",
+            "skip_to_content": "Skip to main content",
             "webgpu_not_supported_1": "WebGPU is not supported",
             "webgpu_not_supported_2": "by this browser :("
         },
@@ -14,6 +15,7 @@
         "manager": {
             "loading": "Loading model files... (only run once)",
             "select_model": "Select the model to use.",
+            "select_quantization": "Select the quantization level.",
             "select_language": "Select the source language.",
             "select_task": "Select the task to perform.",
             "transcribe": "Transcribe",
@@ -29,6 +31,11 @@
             "url_error_cors": "Unable to load audio file: URL does not allow access from this site (CORS error).",
             "url_error_not_found": "Audio file not found at the specified URL.",
             "url_error_access": "Access denied to audio file at the specified URL.",
+            "dismiss_error": "Dismiss error",
+            "audio_load_progress": "Audio loading progress",
+            "audio_url": "Audio file URL",
+            "audio_player": "Audio player",
+            "video_player": "Video player",
             "gpu": "GPU",
             "gpu_disabled": "GPU (unsupported browser)",
             "clear_cache": "Clear cache",
@@ -39,7 +46,9 @@
         },
         "recorder": {
             "start_recording": "Start recording",
-            "stop_recording": "Stop recording ({{duration}})"
+            "stop_recording": "Stop recording ({{duration}})",
+            "recording_error": "Unable to access the microphone. Check browser permissions.",
+            "recording_preview": "Recorded audio preview"
         },
         "transcribe_button": {
             "loading_model": "Loading model...",
@@ -48,13 +57,20 @@
         },
         "transcript": {
             "export": "Export",
+            "export_as": "Export as",
+            "export_group_label": "Transcript export formats",
+            "export_format": "Export transcript as {{format}}",
             "tokens_per_second": "tokens/second",
+            "total_chunks": "segments",
+            "speaker_turns": "speaker turns",
             "view_mode": "View mode",
             "chunks_view": "Chunks view",
             "speakers_view": "Speakers view",
             "auto_scroll": "Auto scroll",
             "speakers_detected": "{{count}} speakers detected",
             "unknown_speaker": "Unknown speaker",
+            "transcript_region": "Transcript",
+            "seek_to_timestamp": "Go to {{time}}: {{text}}",
             "transcribing_in_progress": "In progress...",
             "real_time_transcription": "Real-time transcription:"
         },

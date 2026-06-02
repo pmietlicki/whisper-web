@@ -12,6 +12,12 @@ export class WhisperTextStreamer {
         this.callback_function = options.callback_function;
         this.token_callback_function = options.token_callback_function;
         this.on_finalize = options.on_finalize;
+        this.debug = options.debug ?? false;
+        this.log = (...args) => {
+            if (this.debug) {
+                console.debug(...args);
+            }
+        };
         
         // Internal state
         this.token_cache = [];
@@ -20,7 +26,7 @@ export class WhisperTextStreamer {
         this.current_tokens = [];
         this.chunk_started = false;
         
-        console.log('WhisperTextStreamer initialized with callbacks:', {
+        this.log('WhisperTextStreamer initialized with callbacks:', {
             on_chunk_start: !!this.on_chunk_start,
             on_chunk_end: !!this.on_chunk_end,
             callback_function: !!this.callback_function,
@@ -29,10 +35,10 @@ export class WhisperTextStreamer {
     }
 
     put(value) {
-        console.log('WhisperTextStreamer.put called with tokens:', value, 'Token values:', value.map(t => `${t} (${typeof t})`));
+        this.log('WhisperTextStreamer.put called with tokens:', value, 'Token values:', value.map(t => `${t} (${typeof t})`));
         
         if (this.skip_prompt && this.next_tokens_are_prompt) {
-            console.log('Skipping prompt tokens');
+            this.log('Skipping prompt tokens');
             this.next_tokens_are_prompt = false;
             return;
         }
@@ -48,12 +54,12 @@ export class WhisperTextStreamer {
         };
         
         const normalizedTokens = value.map(normalizeToken).filter(token => !isNaN(token));
-        console.log('Normalized tokens:', normalizedTokens);
+        this.log('Normalized tokens:', normalizedTokens);
         
         const timestamp_tokens = normalizedTokens.filter(token => token >= 50257);
         const text_tokens = normalizedTokens.filter(token => token < 50257 && token >= 0);
         
-        console.log('Filtered tokens - timestamp:', timestamp_tokens, 'text:', text_tokens);
+        this.log('Filtered tokens - timestamp:', timestamp_tokens, 'text:', text_tokens);
         
         // Process timestamp tokens for chunk start/end
         if (timestamp_tokens.length > 0) {
@@ -61,11 +67,11 @@ export class WhisperTextStreamer {
                 const time = (token - 50257) * this.time_precision;
                 
                 if (!this.chunk_started && this.on_chunk_start) {
-                    console.log('Chunk start at time:', time);
+                    this.log('Chunk start at time:', time);
                     this.on_chunk_start(time);
                     this.chunk_started = true;
                 } else if (this.chunk_started && this.on_chunk_end) {
-                    console.log('Chunk end at time:', time);
+                    this.log('Chunk end at time:', time);
                     this.on_chunk_end(time);
                     this.chunk_started = false;
                     
@@ -79,9 +85,9 @@ export class WhisperTextStreamer {
         
         // Process text tokens
         if (text_tokens.length > 0) {
-            console.log('Adding text tokens to cache:', text_tokens);
+            this.log('Adding text tokens to cache:', text_tokens);
             this.current_tokens.push(...text_tokens);
-            console.log('Current token cache:', this.current_tokens);
+            this.log('Current token cache:', this.current_tokens);
             
             // Call token callback for each token
             if (this.token_callback_function) {
@@ -93,27 +99,27 @@ export class WhisperTextStreamer {
             // Decode and send partial text
             try {
                 const decoded_text = this.tokenizer.decode(this.current_tokens, this.decode_kwargs);
-                console.log('Decoded text:', decoded_text, 'Print len:', this.print_len);
+                this.log('Decoded text:', decoded_text, 'Print len:', this.print_len);
                 const new_text = decoded_text.slice(this.print_len);
-                console.log('New text to send:', new_text);
+                this.log('New text to send:', new_text);
                 
                 if (new_text && this.callback_function) {
-                    console.log('Calling callback_function with:', new_text);
+                    this.log('Calling callback_function with:', new_text);
                     this.callback_function(new_text);
                     this.print_len = decoded_text.length;
                 } else {
-                    console.log('Not calling callback - new_text:', !!new_text, 'callback_function:', !!this.callback_function);
+                    this.log('Not calling callback - new_text:', !!new_text, 'callback_function:', !!this.callback_function);
                 }
             } catch (error) {
                 console.warn('Error decoding tokens:', error);
             }
         } else {
-            console.log('No text tokens to process');
+            this.log('No text tokens to process');
         }
     }
 
     end() {
-        console.log('WhisperTextStreamer.end called');
+        this.log('WhisperTextStreamer.end called');
         
         if (this.chunk_started && this.on_chunk_end) {
             // End the current chunk

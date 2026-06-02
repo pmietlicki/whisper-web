@@ -38,3 +38,32 @@ audio::-webkit-media-controls-panel {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (forced-colors: active) {
+    button,
+    input,
+    select,
+    audio,
+    video {
+        forced-color-adjust: auto;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    a:focus-visible {
+        outline: 2px solid CanvasText;
+        outline-offset: 2px;
+    }
+}

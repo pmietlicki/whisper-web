@@ -113,7 +113,7 @@ export function cleanDiarization(
         segmentsBySpeaker.get(seg.label)!.push(seg);
     });
 
-    let finalSegments: SpeakerSegment[] = [];
+    const finalSegments: SpeakerSegment[] = [];
     for (const speakerTurns of segmentsBySpeaker.values()) {
         const consolidatedTurns = consolidateTurnsForSpeaker(speakerTurns, maxGapSeconds);
         finalSegments.push(...consolidatedTurns);

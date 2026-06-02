@@ -58,6 +58,7 @@ export interface Transcriber {
     onInputChange: () => void;
     isBusy: boolean;
     isModelLoading: boolean;
+    error?: string;
     progressItems: ProgressItem[];
     start: (audioData: AudioBuffer | undefined, audioMetrics?: {
         snr: number;
@@ -88,13 +89,15 @@ export function useTranscriber(): Transcriber {
     const [interimTranscript, setInterimTranscript] = useState<string | undefined>(undefined);
     const [isBusy, setIsBusy] = useState(false);
     const [isModelLoading, setIsModelLoading] = useState(false);
+    const [error, setError] = useState<string | undefined>(undefined);
 
     const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
 
     const webWorker = useWorker((event) => {
         const message = event.data;
+        const status = message.status ?? message.type;
         // Update the state with the result
-        switch (message.status) {
+        switch (status) {
             case "progress":
                 // Model file progress: update one of the progress items.
                 setProgressItems((prev) =>
@@ -106,20 +109,19 @@ export function useTranscriber(): Transcriber {
                     }),
                 );
                 break;
-            case "interim":
-                console.log('Received interim message:', message);
+            case "interim": {
                 // Use the text field directly if available, otherwise fall back to data.text
                 const interimText = message.text || message.data?.text || '';
                 setInterimTranscript(interimText);
                 break;
+            }
             case "update":
             case "complete": {
-                const busy = message.status === "update";
+                const busy = status === "update";
                 const updateMessage = message as TranscriberUpdateData;
-                console.log(`Received ${message.status} message:`, message);
                 
                 // Only clear interim transcript on complete, not on update
-                if (message.status === "complete") {
+                if (status === "complete") {
                     setInterimTranscript(undefined);
                 }
                 
@@ -144,8 +146,11 @@ export function useTranscriber(): Transcriber {
                 break;
             case "error":
                 setIsBusy(false);
-                alert(
-                    `An error occurred: "${message.data.message}". Please file a bug report.`,
+                setIsModelLoading(false);
+                setError(
+                    message.data?.message ??
+                        message.message ??
+                        "An unexpected transcription error occurred.",
                 );
                 break;
             case "done":
@@ -182,6 +187,7 @@ export function useTranscriber(): Transcriber {
     const onInputChange = useCallback(() => {
         setTranscript(undefined);
         setInterimTranscript(undefined);
+        setError(undefined);
     }, []);
 
     const postRequest = useCallback(
@@ -197,6 +203,7 @@ export function useTranscriber(): Transcriber {
                 setTranscript(undefined);
                 setInterimTranscript(undefined);
                 setIsBusy(true);
+                setError(undefined);
 
                 let audio;
                 if (audioData.numberOfChannels === 2) {
@@ -214,11 +221,6 @@ export function useTranscriber(): Transcriber {
                     audio = audioData.getChannelData(0);
                 }
 
-                // Log audio metrics for debugging
-                if (audioMetrics) {
-                    console.log('Starting transcription with audio metrics:', audioMetrics);
-                }
-
                 webWorker.postMessage({
                     audio,
                     model,
@@ -230,7 +232,9 @@ export function useTranscriber(): Transcriber {
                             ? language
                             : null,
                     audioMetrics,
-                    token: import.meta.env.VITE_HF_TOKEN
+                    token:
+                        import.meta.env.VITE_HF_AUTH_TOKEN ??
+                        import.meta.env.VITE_HF_TOKEN,
                 });
             }
         },
@@ -242,6 +246,7 @@ export function useTranscriber(): Transcriber {
             onInputChange,
             isBusy,
             isModelLoading,
+            error,
             progressItems,
             start: postRequest,
             interimTranscript,
@@ -261,6 +266,7 @@ export function useTranscriber(): Transcriber {
         onInputChange,
         isBusy,
         isModelLoading,
+        error,
         progressItems,
         postRequest,
         interimTranscript,

@@ -60,7 +60,7 @@ export default function Modal({
                             leaveFrom='opacity-100 scale-100'
                             leaveTo='opacity-0 scale-95'
                         >
-                            <DialogPanel className='w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all'>
+                            <DialogPanel className='w-full max-w-md max-h-[90vh] transform overflow-y-auto rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all'>
                                 <DialogTitle
                                     as='h3'
                                     className='text-lg font-medium leading-6 text-gray-900'
@@ -71,19 +71,23 @@ export default function Modal({
                                     {content}
                                 </div>
 
-                                <div className='mt-4 flex flex-row-reverse'>
+                                <div className='mt-4 flex flex-wrap-reverse justify-end gap-2'>
                                     {submitText && (
                                         <button
                                             type='button'
                                             disabled={!submitEnabled}
-                                            className={`inline-flex ml-2 justify-center rounded-md border border-transparent ${
+                                            className={`inline-flex justify-center rounded-md border border-transparent ${
                                                 submitEnabled
                                                     ? "bg-indigo-600"
-                                                    : "bg-grey-300"
-                                            } px-4 py-2 text-sm font-medium text-indigo-100 ${
+                                                    : "bg-gray-300"
+                                            } px-4 py-2 text-sm font-medium ${
+                                                submitEnabled
+                                                    ? "text-indigo-100"
+                                                    : "text-gray-600"
+                                            } ${
                                                 submitEnabled
                                                     ? "hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-                                                    : ""
+                                                    : "cursor-not-allowed"
                                             } transition-all duration-300`}
                                             onClick={onSubmit}
                                         >
@@ -92,7 +96,7 @@ export default function Modal({
                                     )}
                                     <button
                                         type='button'
-                                        className='inline-flex ml-2 justify-center rounded-md border border-transparent bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-900 hover:bg-indigo-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-all duration-300'
+                                        className='inline-flex justify-center rounded-md border border-transparent bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-900 hover:bg-indigo-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-all duration-300'
                                         onClick={onClose}
                                     >
                                         {t("modal.close")}

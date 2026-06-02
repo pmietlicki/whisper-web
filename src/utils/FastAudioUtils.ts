@@ -18,17 +18,11 @@ export class FastAudioProcessor {
         processedBuffer: AudioBuffer;
         metrics: AudioQualityMetrics;
     }> {
-        console.log('Starting fast audio processing...');
-        const startTime = performance.now();
-
         // Convert to mono if needed (simplified)
         const processedBuffer = this.convertToMono(audioBuffer);
         
         // Calculate basic metrics quickly
         const metrics = this.calculateBasicMetrics(processedBuffer);
-        
-        const processingTime = performance.now() - startTime;
-        console.log(`Fast audio processing completed in ${processingTime.toFixed(2)}ms`);
         
         return {
             processedBuffer,
@@ -44,7 +38,11 @@ export class FastAudioProcessor {
             return audioBuffer;
         }
 
-        const audioContext = new AudioContext({ sampleRate: audioBuffer.sampleRate });
+        const audioContext = new OfflineAudioContext(
+            1,
+            audioBuffer.length,
+            audioBuffer.sampleRate,
+        );
         const monoBuffer = audioContext.createBuffer(
             1,
             audioBuffer.length,

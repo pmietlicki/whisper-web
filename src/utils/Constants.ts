@@ -140,6 +140,8 @@ export const MODELS: { [key: string]: [string, string] } = {
     "onnx-community/whisper-base_timestamped": ["base-timestamped", ""],
     "onnx-community/whisper-small_timestamped": ["small-timestamped", ""],
     "onnx-community/whisper-tiny.en_timestamped": ["tiny.en-timestamped", "en"],
+    "onnx-community/whisper-base.en_timestamped": ["base.en-timestamped", "en"],
+    "onnx-community/whisper-small.en_timestamped": ["small.en-timestamped", "en"],
     // French-optimized models
     "onnx-community/whisper-small-cv11-french-ONNX": ["whisper-small-cv11-french", "fr"],
     // Swedish models

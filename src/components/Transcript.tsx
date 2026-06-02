@@ -1,5 +1,5 @@
-import { useRef, useEffect, useState, useMemo, memo } from "react";
-import { FixedSizeList as List } from 'react-window';
+import { useRef, useEffect, useState, useMemo, memo, useCallback, useId, forwardRef } from "react";
+import { VariableSizeList as List } from 'react-window';
 import { t } from "i18next"; // Assurez-vous que i18next est configuré
 
 // SECTION 1: DÉFINITIONS DES TYPES
@@ -66,6 +66,28 @@ function getSpeakerColor(speakerLabel?: string) {
     return SPEAKER_COLORS[index];
 }
 
+const TranscriptListOuter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+    function TranscriptListOuter(props, ref) {
+        return <div {...props} ref={ref} role="list" />;
+    },
+);
+
+function getTranscriptListHeight(): number {
+    if (typeof window === "undefined") {
+        return 600;
+    }
+
+    const availableHeight = Math.floor(window.innerHeight * 0.58);
+    return Math.min(620, Math.max(320, availableHeight));
+}
+
+function prefersReducedMotion(): boolean {
+    return (
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+}
+
 // SECTION 3: SOUS-COMPOSANT
 interface TranscriptChunkProps {
     chunk: Chunk;
@@ -77,7 +99,7 @@ interface TranscriptChunkProps {
 }
 const TranscriptChunk = memo(({ chunk, isCurrent, isBusy, showSpeaker, onClick, style }: TranscriptChunkProps) => {
     const color = getSpeakerColor(chunk.speaker);
-    const chunkClasses = `w-full h-full flex flex-row p-3 rounded-lg cursor-pointer transition-all duration-200 shadow-sm border ${
+    const chunkClasses = `w-full h-full flex flex-row p-3 rounded-lg text-left transition-all duration-200 shadow-sm border focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 ${
         isCurrent
             ? `bg-yellow-100 border-l-4 ${color.border} shadow-md`
             : isBusy
@@ -85,28 +107,37 @@ const TranscriptChunk = memo(({ chunk, isCurrent, isBusy, showSpeaker, onClick, 
             : 'bg-gray-50 hover:bg-blue-50 border-gray-100'
     }`;
     return (
-        <div style={style} className="px-2 py-1" onClick={onClick}>
-            <div className={chunkClasses}>
-                <div className='mr-4 text-xs text-gray-500 font-mono min-w-[60px] mt-1'>
+        <div style={style} className="px-2 py-1" role="listitem">
+            <button
+                type="button"
+                className={chunkClasses}
+                onClick={onClick}
+                aria-current={isCurrent ? "true" : undefined}
+                aria-label={t("transcript.seek_to_timestamp", {
+                    time: formatAudioTimestamp(chunk.timestamp[0]),
+                    text: chunk.text,
+                })}
+            >
+                <span className='mr-4 text-xs text-gray-500 font-mono min-w-[60px] mt-1'>
                     {formatAudioTimestamp(chunk.timestamp[0])}
-                </div>
-                <div className='flex-1'>
+                </span>
+                <span className='flex-1'>
                     {showSpeaker && chunk.speaker && (
-                        <div className='flex items-center mb-1'>
-                            <div className={`w-2 h-2 rounded-full mr-2 ${color.bg}`}></div>
+                        <span className='flex items-center mb-1'>
+                            <span className={`w-2 h-2 rounded-full mr-2 ${color.bg}`} aria-hidden="true"></span>
                             <span className={`text-xs font-medium ${color.text}`}>{chunk.speaker}</span>
-                        </div>
+                        </span>
                     )}
-                    <div className={`text-gray-800 leading-relaxed ${isCurrent ? 'font-medium' : ''}`}>
+                    <span className={`block text-gray-800 leading-relaxed ${isCurrent ? 'font-medium' : ''}`}>
                         {chunk.text}
-                    </div>
-                </div>
+                    </span>
+                </span>
                 {chunk.confidence && (
-                    <div className='ml-2 text-xs text-gray-400 self-start mt-1'>
+                    <span className='ml-2 text-xs text-gray-400 self-start mt-1'>
                         {Math.round(chunk.confidence * 100)}%
-                    </div>
+                    </span>
                 )}
-            </div>
+            </button>
         </div>
     );
 });
@@ -122,6 +153,9 @@ export default function Transcript({ transcribedData, interimTranscript, current
     // Mode fixé sur 'chunks' car la diarisation est désactivée
     //const viewMode = 'chunks';
     const [autoScroll, setAutoScroll] = useState(true);
+    const [listHeight, setListHeight] = useState(() => getTranscriptListHeight());
+    const [announcedInterimTranscript, setAnnouncedInterimTranscript] = useState("");
+    const autoScrollId = useId();
 
     const endOfMessagesRef = useRef<HTMLDivElement>(null);
     const virtualListRef = useRef<List>(null);
@@ -165,15 +199,62 @@ export default function Transcript({ transcribedData, interimTranscript, current
         });
     }, [transcribedData?.chunks, currentTime]);
 
+    const getItemSize = useCallback(
+        (index: number) => {
+            const chunk = transcribedData?.chunks[index];
+            const textLength = chunk?.text?.length ?? 0;
+            const viewportWidth =
+                typeof window !== "undefined" ? window.innerWidth : 1024;
+            const charsPerLine =
+                viewportWidth < 480 ? 34 : viewportWidth < 768 ? 54 : 82;
+            const estimatedLines = Math.max(
+                1,
+                Math.ceil(textLength / charsPerLine),
+            );
+
+            return Math.min(280, 64 + estimatedLines * 24);
+        },
+        [transcribedData?.chunks],
+    );
+
+    useEffect(() => {
+        const updateHeight = () => setListHeight(getTranscriptListHeight());
+        updateHeight();
+        window.addEventListener("resize", updateHeight);
+
+        return () => {
+            window.removeEventListener("resize", updateHeight);
+        };
+    }, []);
+
+    useEffect(() => {
+        virtualListRef.current?.resetAfterIndex(0, true);
+    }, [getItemSize, transcribedData?.chunks?.length]);
+
     useEffect(() => {
         if (!autoScroll) return;
         if (currentChunkIndex >= 0 && virtualListRef.current) {
             virtualListRef.current.scrollToItem(currentChunkIndex, 'center');
         }
         if (transcribedData?.isBusy || interimTranscript) {
-            endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
+            endOfMessagesRef.current?.scrollIntoView({
+                behavior: prefersReducedMotion() ? "auto" : "smooth",
+            });
         }
     }, [currentChunkIndex, autoScroll, transcribedData?.isBusy, interimTranscript]);
+
+    useEffect(() => {
+        if (!interimTranscript) {
+            setAnnouncedInterimTranscript("");
+            return;
+        }
+
+        const timeout = window.setTimeout(() => {
+            setAnnouncedInterimTranscript(interimTranscript);
+        }, 900);
+
+        return () => window.clearTimeout(timeout);
+    }, [interimTranscript]);
 
     const saveBlob = (blob: Blob, filename: string) => {
         const url = URL.createObjectURL(blob);
@@ -214,12 +295,18 @@ export default function Transcript({ transcribedData, interimTranscript, current
 
     return (
         <div className='w-full flex flex-col'>
+            <div className="sr-only" aria-live="polite" aria-atomic="true">
+                {announcedInterimTranscript
+                    ? `${t("transcript.real_time_transcription")} ${announcedInterimTranscript}`
+                    : ""}
+            </div>
+
             {/* --- EMPLACEMENT 1: CONTRÔLES --- */}
             {transcribedData?.chunks && transcribedData.chunks.length > 0 && (
                 <div className='flex flex-wrap items-center justify-between gap-4 mb-4 p-3 bg-gray-50 rounded-lg border'>
                     <div className='flex items-center space-x-4'>
-                        <label className='flex items-center space-x-2 cursor-pointer'>
-                            <input type='checkbox' checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500' />
+                        <label htmlFor={autoScrollId} className='flex items-center space-x-2 cursor-pointer'>
+                            <input id={autoScrollId} type='checkbox' checked={autoScroll} onChange={(e) => setAutoScroll(e.target.checked)} className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500' />
                             <span className='text-sm text-gray-700'>{t("transcript.auto_scroll", "Défilement auto")}</span>
                         </label>
                     </div>
@@ -228,9 +315,12 @@ export default function Transcript({ transcribedData, interimTranscript, current
 
             {/* --- CONTENEUR DE LA TRANSCRIPTION --- */}
             {(transcribedData?.chunks && transcribedData.chunks.length > 0) || interimTranscript ? (
-                <div className='w-full border border-gray-200 rounded-lg bg-white overflow-hidden'>
+                <section
+                    className='w-full border border-gray-200 rounded-lg bg-white overflow-hidden'
+                    aria-label={t("transcript.transcript_region")}
+                >
                     {transcribedData?.chunks && transcribedData.chunks.length > 0 && (
-                        <List ref={virtualListRef} height={interimTranscript ? 550 : 600} itemCount={transcribedData.chunks.length} itemSize={90} width="100%">
+                        <List ref={virtualListRef} height={interimTranscript ? Math.max(280, listHeight - 96) : listHeight} itemCount={transcribedData.chunks.length} itemSize={getItemSize} width="100%" outerElementType={TranscriptListOuter}>
                             {({ index, style }) => (
                                 <TranscriptChunk style={style} chunk={transcribedData.chunks[index]} isCurrent={index === currentChunkIndex} isBusy={transcribedData.isBusy} showSpeaker={false} onClick={() => onSeek?.(transcribedData.chunks[index].timestamp[0])} />
                             )}
@@ -238,17 +328,19 @@ export default function Transcript({ transcribedData, interimTranscript, current
                     )}
                     {interimTranscript && (
                         <div className="w-full px-2 py-1 border-t border-gray-200">
-                            <div className="w-full flex flex-row p-3 rounded-lg bg-blue-50 border border-blue-200 animate-pulse">
-                                <div className='mr-4 text-xs text-blue-500 font-mono min-w-[60px] mt-1'>{t('transcript.transcribing_in_progress')}</div>
-                                <div className='flex-1 text-blue-700 italic'>
-                                    <span className='text-xs text-blue-500 mr-2'>{t('transcript.real_time_transcription')}</span>
+                            <div className="w-full flex flex-col gap-1 p-3 rounded-lg bg-blue-50 border border-blue-200 sm:flex-row">
+                                <div className='text-xs font-semibold uppercase text-blue-700 sm:mr-4 sm:min-w-[92px]'>
+                                    {t('transcript.transcribing_in_progress')}
+                                </div>
+                                <div className='flex-1 text-base leading-relaxed text-blue-950 sm:text-lg'>
+                                    <span className='sr-only'>{t('transcript.real_time_transcription')} </span>
                                     {interimTranscript}
                                 </div>
                             </div>
                         </div>
                     )}
                     <div ref={endOfMessagesRef} />
-                </div>
+                </section>
             ) : null}
 
             {/* --- EMPLACEMENT 2: BOUTONS D'EXPORT ET STATISTIQUES --- */}
@@ -256,9 +348,9 @@ export default function Transcript({ transcribedData, interimTranscript, current
                 {transcribedData && !transcribedData.isBusy && transcribedData.chunks.length > 0 && (
                     <div className='w-full text-center mt-6 border-t pt-6'>
                         <span className="text-sm font-medium text-gray-800 mr-3">{t("transcript.export_as", "Exporter en")}:</span>
-                        <div className="inline-flex rounded-md shadow-sm" role="group">
+                        <div className="inline-flex rounded-md shadow-sm" role="group" aria-label={t("transcript.export_group_label")}>
                             {exportButtons.map((button) => (
-                                <button key={button.name} onClick={button.onClick} className="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 first:rounded-l-lg last:rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                <button key={button.name} type="button" onClick={button.onClick} aria-label={t("transcript.export_format", { format: button.name })} className="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 first:rounded-l-lg last:rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                     {button.name}
                                 </button>
                             ))}
