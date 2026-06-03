@@ -97,6 +97,7 @@
             "start": "Start direkte",
             "stop": "Stopp",
             "clear": "Tøm teksting",
+            "reset": "Tilbakestill",
             "export_group": "Eksporter direkteteksting",
             "waiting_for_speech": "Venter på tale...",
             "empty": "Trykk Start for å begynne.",

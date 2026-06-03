@@ -97,6 +97,7 @@
             "start": "Démarrer le direct",
             "stop": "Arrêter",
             "clear": "Effacer les sous-titres",
+            "reset": "Réinitialiser",
             "export_group": "Exporter les sous-titres en direct",
             "waiting_for_speech": "En attente de parole...",
             "empty": "Appuyez sur Démarrer pour lancer.",

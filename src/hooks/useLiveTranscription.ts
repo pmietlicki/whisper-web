@@ -556,6 +556,16 @@ export function useLiveTranscription({
     }, []);
 
     const reset = useCallback(() => {
+        if (isRunningRef.current) return;
+
+        sessionIdRef.current++;
+        transcriptStartRef.current = 0;
+        audioBufferRef.current = { chunks: [], totalSamples: 0 };
+        lastEnqueuedSampleRef.current = 0;
+        activeSegmentRef.current = null;
+        localBusyRef.current = false;
+        localQueueRef.current = [];
+        lagRecoveryCountRef.current = 0;
         setLines([]);
         linesRef.current = [];
         wsLinesRef.current = [];
@@ -564,9 +574,11 @@ export function useLiveTranscription({
         setError(undefined);
         setWarning(undefined);
         setLatencySeconds(undefined);
+        setElapsedSeconds(0);
+        setInputLevel(0);
         setQueueDepth(0);
-        localQueueRef.current = [];
-        lagRecoveryCountRef.current = 0;
+        setProgressItems([]);
+        setStatus("idle");
     }, []);
 
     const cleanupAudio = useCallback(() => {

@@ -97,6 +97,7 @@
             "start": "Starta live",
             "stop": "Stoppa",
             "clear": "Rensa textning",
+            "reset": "Återställ",
             "export_group": "Exportera livetextning",
             "waiting_for_speech": "Väntar på tal...",
             "empty": "Tryck på Starta för att börja.",

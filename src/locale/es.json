@@ -97,6 +97,7 @@
             "start": "Iniciar directo",
             "stop": "Detener",
             "clear": "Borrar subtítulos",
+            "reset": "Reiniciar",
             "export_group": "Exportar subtítulos en directo",
             "waiting_for_speech": "Esperando voz...",
             "empty": "Pulsa Iniciar para empezar.",

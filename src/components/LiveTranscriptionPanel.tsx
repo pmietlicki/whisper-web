@@ -71,7 +71,7 @@ function StopIcon() {
     );
 }
 
-function TrashIcon() {
+function ResetIcon() {
     return (
         <svg
             viewBox="0 0 24 24"
@@ -81,11 +81,10 @@ function TrashIcon() {
             strokeWidth="2"
             aria-hidden="true"
         >
-            <path d="M4 7h16" />
-            <path d="M10 11v6" />
-            <path d="M14 11v6" />
-            <path d="m5 7 1 14h12l1-14" />
-            <path d="M9 7V4h6v3" />
+            <path d="M3 12a9 9 0 0 1 15.5-6.2" />
+            <path d="M18.5 3.8V9h-5.2" />
+            <path d="M21 12a9 9 0 0 1-15.5 6.2" />
+            <path d="M5.5 20.2V15h5.2" />
         </svg>
     );
 }
@@ -123,6 +122,11 @@ export default function LiveTranscriptionPanel({
         live.status === "processing" ||
         live.isModelLoading;
     const canExport = live.lines.length > 0;
+    const canReset =
+        canExport ||
+        live.interimText.length > 0 ||
+        live.elapsedSeconds > 0 ||
+        Boolean(live.error || live.warning);
 
     useEffect(() => {
         onEngineChange?.(live.engine);
@@ -257,11 +261,12 @@ export default function LiveTranscriptionPanel({
                             <button
                                 type="button"
                                 onClick={live.reset}
-                                disabled={live.isRunning || !canExport}
-                                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                aria-label={t("live.clear")}
+                                disabled={live.isRunning || !canReset}
+                                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                title={t("live.reset")}
                             >
-                                <TrashIcon />
+                                <ResetIcon />
+                                {t("live.reset")}
                             </button>
                             <div
                                 className="inline-flex rounded-md shadow-sm"

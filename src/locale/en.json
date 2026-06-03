@@ -97,6 +97,7 @@
             "start": "Start live",
             "stop": "Stop",
             "clear": "Clear captions",
+            "reset": "Reset",
             "export_group": "Export live captions",
             "waiting_for_speech": "Waiting for speech...",
             "empty": "Press Start to begin.",
