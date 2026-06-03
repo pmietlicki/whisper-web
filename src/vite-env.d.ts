@@ -14,3 +14,13 @@ interface ImportMetaEnv {
 interface ImportMeta {
     readonly env: ImportMetaEnv;
 }
+
+interface WhisperWebRuntimeConfig {
+    readonly liveTranscriptionWsUrl?: string;
+    readonly liveTranscriptionServer?: string;
+    readonly liveTranscriptionModel?: string;
+}
+
+interface Window {
+    readonly __WHISPER_WEB_CONFIG__?: WhisperWebRuntimeConfig;
+}

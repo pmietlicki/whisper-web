@@ -5,12 +5,6 @@ FROM node:20-slim AS build
 WORKDIR /app
 
 ENV npm_config_onnxruntime_node_install=skip
-ARG VITE_LIVE_TRANSCRIPTION_WS_URL
-ARG VITE_LIVE_TRANSCRIPTION_SERVER
-ARG VITE_LIVE_TRANSCRIPTION_MODEL
-ENV VITE_LIVE_TRANSCRIPTION_WS_URL=$VITE_LIVE_TRANSCRIPTION_WS_URL
-ENV VITE_LIVE_TRANSCRIPTION_SERVER=$VITE_LIVE_TRANSCRIPTION_SERVER
-ENV VITE_LIVE_TRANSCRIPTION_MODEL=$VITE_LIVE_TRANSCRIPTION_MODEL
 
 COPY package.json package-lock.json ./
 RUN npm ci --include=dev --no-audit --no-fund
@@ -20,8 +14,13 @@ RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:alpine
 
+USER root
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY docker/runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh \
+    && chown nginx:nginx /usr/share/nginx/html/runtime-config.js
+USER nginx
 
 EXPOSE 8080
 

@@ -131,12 +131,34 @@ const LIVE_SEGMENT_SECONDS = 4;
 const LIVE_OVERLAP_SECONDS = 1;
 const LOCAL_QUEUE_LIMIT = 2;
 const SILENCE_RMS_THRESHOLD = 0.006;
-const LIVE_WS_URL = import.meta.env.VITE_LIVE_TRANSCRIPTION_WS_URL?.trim();
+
+function firstNonEmpty(...values: Array<string | undefined>) {
+    return values.map((value) => value?.trim()).find(Boolean);
+}
+
+function getRuntimeConfig() {
+    if (typeof window === "undefined") {
+        return undefined;
+    }
+    return window.__WHISPER_WEB_CONFIG__;
+}
+
+const RUNTIME_CONFIG = getRuntimeConfig();
+const LIVE_WS_URL = firstNonEmpty(
+    RUNTIME_CONFIG?.liveTranscriptionWsUrl,
+    import.meta.env.VITE_LIVE_TRANSCRIPTION_WS_URL,
+);
 const LIVE_SERVER_PROTOCOL = normalizeLiveServerProtocol(
-    import.meta.env.VITE_LIVE_TRANSCRIPTION_SERVER,
+    firstNonEmpty(
+        RUNTIME_CONFIG?.liveTranscriptionServer,
+        import.meta.env.VITE_LIVE_TRANSCRIPTION_SERVER,
+    ),
 );
 const LIVE_SERVER_MODEL =
-    import.meta.env.VITE_LIVE_TRANSCRIPTION_MODEL?.trim() || "small";
+    firstNonEmpty(
+        RUNTIME_CONFIG?.liveTranscriptionModel,
+        import.meta.env.VITE_LIVE_TRANSCRIPTION_MODEL,
+    ) || "small";
 
 function getAudioContextConstructor(): typeof AudioContext | undefined {
     const windowWithAudioContext = window as Window & {
