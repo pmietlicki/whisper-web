@@ -48,7 +48,9 @@
             "start_recording": "Start recording",
             "stop_recording": "Stop recording ({{duration}})",
             "recording_error": "Unable to access the microphone. Check browser permissions.",
-            "recording_preview": "Recorded audio preview"
+            "recording_preview": "Recorded audio preview",
+            "live_captioning": "Live captions",
+            "classic_recording": "Classic recording"
         },
         "transcribe_button": {
             "loading_model": "Loading model...",
@@ -73,6 +75,31 @@
             "seek_to_timestamp": "Go to {{time}}: {{text}}",
             "transcribing_in_progress": "In progress...",
             "real_time_transcription": "Real-time transcription:"
+        },
+        "live": {
+            "region_label": "Live captions",
+            "language_french": "French",
+            "engine_group": "Live transcription engine",
+            "engine_local": "Local",
+            "engine_websocket": "Server",
+            "status_idle": "Ready",
+            "status_connecting": "Connecting",
+            "status_listening": "Listening",
+            "status_processing": "Processing",
+            "status_stopping": "Stopping",
+            "status_error": "Error",
+            "unsupported": "Microphone unsupported",
+            "elapsed": "Elapsed",
+            "latency": "Latency",
+            "queue": "Queue",
+            "start": "Start live",
+            "stop": "Stop",
+            "clear": "Clear captions",
+            "export_group": "Export live captions",
+            "waiting_for_speech": "Waiting for speech...",
+            "empty": "Press Start to begin.",
+            "history": "Caption history",
+            "warning_lag": "This device is falling behind: some audio fragments were skipped to keep the captions live."
         },
         "language_selector": {
             "title": "Language",

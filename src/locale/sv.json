@@ -48,7 +48,9 @@
             "start_recording": "Starta inspelning",
             "stop_recording": "Stoppa inspelning ({{duration}})",
             "recording_error": "Det går inte att komma åt mikrofonen. Kontrollera webbläsarens behörigheter.",
-            "recording_preview": "Förhandsgranskning av inspelat ljud"
+            "recording_preview": "Förhandsgranskning av inspelat ljud",
+            "live_captioning": "Livetextning",
+            "classic_recording": "Klassisk inspelning"
         },
         "transcribe_button": {
             "loading_model": "Laddar modell...",
@@ -73,6 +75,31 @@
             "seek_to_timestamp": "Gå till {{time}}: {{text}}",
             "transcribing_in_progress": "Pågår...",
             "real_time_transcription": "Realtidstranskription:"
+        },
+        "live": {
+            "region_label": "Livetextning",
+            "language_french": "Franska",
+            "engine_group": "Motor för livetextning",
+            "engine_local": "Lokal",
+            "engine_websocket": "Server",
+            "status_idle": "Redo",
+            "status_connecting": "Ansluter",
+            "status_listening": "Lyssnar",
+            "status_processing": "Bearbetar",
+            "status_stopping": "Stoppar",
+            "status_error": "Fel",
+            "unsupported": "Mikrofon stöds inte",
+            "elapsed": "Tid",
+            "latency": "Latens",
+            "queue": "Kö",
+            "start": "Starta live",
+            "stop": "Stoppa",
+            "clear": "Rensa textning",
+            "export_group": "Exportera livetextning",
+            "waiting_for_speech": "Väntar på tal...",
+            "empty": "Tryck på Starta för att börja.",
+            "history": "Textningshistorik",
+            "warning_lag": "Enheten ligger efter: vissa ljudfragment hoppades över för att behålla liveflödet."
         },
         "language_selector": {
             "title": "Språk",

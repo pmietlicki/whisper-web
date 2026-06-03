@@ -48,7 +48,9 @@
             "start_recording": "Iniciar grabación",
             "stop_recording": "Detener grabación ({{duration}})",
             "recording_error": "No se puede acceder al micrófono. Comprueba los permisos del navegador.",
-            "recording_preview": "Vista previa del audio grabado"
+            "recording_preview": "Vista previa del audio grabado",
+            "live_captioning": "Subtítulos en directo",
+            "classic_recording": "Grabación clásica"
         },
         "transcribe_button": {
             "loading_model": "Cargando modelo...",
@@ -73,6 +75,31 @@
             "seek_to_timestamp": "Ir a {{time}}: {{text}}",
             "transcribing_in_progress": "En progreso...",
             "real_time_transcription": "Transcripción en tiempo real:"
+        },
+        "live": {
+            "region_label": "Subtítulos en directo",
+            "language_french": "Francés",
+            "engine_group": "Motor de transcripción en directo",
+            "engine_local": "Local",
+            "engine_websocket": "Servidor",
+            "status_idle": "Listo",
+            "status_connecting": "Conectando",
+            "status_listening": "Escuchando",
+            "status_processing": "Procesando",
+            "status_stopping": "Deteniendo",
+            "status_error": "Error",
+            "unsupported": "Micrófono no compatible",
+            "elapsed": "Duración",
+            "latency": "Latencia",
+            "queue": "Cola",
+            "start": "Iniciar directo",
+            "stop": "Detener",
+            "clear": "Borrar subtítulos",
+            "export_group": "Exportar subtítulos en directo",
+            "waiting_for_speech": "Esperando voz...",
+            "empty": "Pulsa Iniciar para empezar.",
+            "history": "Historial de subtítulos",
+            "warning_lag": "El dispositivo se está retrasando: se omitieron algunos fragmentos de audio para mantener el directo."
         },
         "language_selector": {
             "title": "Idioma",

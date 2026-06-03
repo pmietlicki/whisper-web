@@ -46,6 +46,7 @@ interface AudioManagerProps {
     onTimeUpdate?: (currentTime: number) => void;
     currentTime?: number;
     onSeek?: (time: number) => void;
+    onLiveRequested?: () => void;
 }
 
 export default function AudioManager(props: AudioManagerProps) {
@@ -289,6 +290,7 @@ export default function AudioManager(props: AudioManagerProps) {
                             <RecordTile
                                 icon={<MicrophoneIcon />}
                                 text={t("manager.record")}
+                                onLiveRequested={props.onLiveRequested}
                                 setAudioData={(e) => {
                                     props.transcriber.onInputChange();
                                     setAudioFromRecording(e);
@@ -924,6 +926,7 @@ function RecordTile(props: {
     icon: JSX.Element;
     text: string;
     setAudioData: (data: Blob) => void;
+    onLiveRequested?: () => void;
 }) {
     const [showModal, setShowModal] = useState(false);
 
@@ -950,6 +953,7 @@ function RecordTile(props: {
                 onSubmit={onSubmit}
                 onProgress={() => {}}
                 onClose={onClose}
+                onLiveRequested={props.onLiveRequested}
             />
         </>
     );
@@ -960,8 +964,19 @@ function RecordModal(props: {
     onProgress: (data: Blob | undefined) => void;
     onSubmit: (data: Blob | undefined) => void;
     onClose: () => void;
+    onLiveRequested?: () => void;
 }) {
     const [audioBlob, setAudioBlob] = useState<Blob>();
+    const [showClassicRecorder, setShowClassicRecorder] = useState(
+        () => props.onLiveRequested === undefined,
+    );
+
+    useEffect(() => {
+        if (props.show) {
+            setAudioBlob(undefined);
+            setShowClassicRecorder(props.onLiveRequested === undefined);
+        }
+    }, [props.onLiveRequested, props.show]);
 
     const onRecordingComplete = (blob: Blob) => {
         setAudioBlob(blob);
@@ -977,23 +992,50 @@ function RecordModal(props: {
         setAudioBlob(undefined);
     };
 
+    const onLiveRequested = () => {
+        props.onLiveRequested?.();
+        onClose();
+    };
+
     return (
         <Modal
             show={props.show}
             title={t("manager.record")}
             content={
                 <>
-                    {t("manager.record_description")}
-                    <AudioRecorder
-                        onRecordingProgress={(blob) => {
-                            props.onProgress(blob);
-                        }}
-                        onRecordingComplete={onRecordingComplete}
-                    />
+                    {props.onLiveRequested && (
+                        <div className='grid gap-2 sm:grid-cols-2'>
+                            <button
+                                type='button'
+                                onClick={onLiveRequested}
+                                className='rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2'
+                            >
+                                {t("recorder.live_captioning")}
+                            </button>
+                            <button
+                                type='button'
+                                onClick={() => setShowClassicRecorder(true)}
+                                className='rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2'
+                            >
+                                {t("recorder.classic_recording")}
+                            </button>
+                        </div>
+                    )}
+                    {showClassicRecorder && (
+                        <div className={props.onLiveRequested ? "mt-4" : ""}>
+                            {t("manager.record_description")}
+                            <AudioRecorder
+                                onRecordingProgress={(blob) => {
+                                    props.onProgress(blob);
+                                }}
+                                onRecordingComplete={onRecordingComplete}
+                            />
+                        </div>
+                    )}
                 </>
             }
             onClose={onClose}
-            submitText={t("manager.submit")}
+            submitText={showClassicRecorder ? t("manager.submit") : undefined}
             submitEnabled={audioBlob !== undefined}
             onSubmit={onSubmit}
         />

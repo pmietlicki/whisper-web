@@ -187,9 +187,19 @@ export enum AudioSource {
 }
 
 const isMobileOrTablet = mobileTabletCheck();
+const FRENCH_SPECIALIZED_MODEL = "onnx-community/whisper-small-cv11-french-ONNX";
+const FRENCH_LIGHT_MODEL = "onnx-community/whisper-tiny";
 
 function getBaseLang(language: string): string {
     return language.split("-")[0].toLowerCase();
+}
+
+function hasLikelyFastRuntime(): boolean {
+    return (
+        typeof navigator !== "undefined" &&
+        Boolean(navigator.gpu) &&
+        !isMobileOrTablet
+    );
 }
 
 
@@ -217,7 +227,7 @@ function getDefaultModel(language: string): string {
         case "sv":
             return `KBLab/kb-whisper-${isMobileOrTablet ? "tiny" : "small"}`;
         case "fr":
-            return `onnx-community/whisper-${isMobileOrTablet ? "tiny" : "small"}`;
+            return isMobileOrTablet ? FRENCH_LIGHT_MODEL : FRENCH_SPECIALIZED_MODEL;
         case "no":
             return `PierreMesure/nb-whisper-${
                 isMobileOrTablet ? "tiny" : "small"
@@ -233,6 +243,15 @@ function getDefaultModel(language: string): string {
                 isMobileOrTablet ? "tiny" : "base"
             }_timestamped`;
     }
+}
+
+function getDefaultLiveModel(language: string): string {
+    const lang = getBaseLang(language);
+    if (lang === "fr") {
+        return hasLikelyFastRuntime() ? FRENCH_SPECIALIZED_MODEL : FRENCH_LIGHT_MODEL;
+    }
+
+    return `onnx-community/whisper-${isMobileOrTablet ? "tiny" : "base"}`;
 }
 
 function getDefaultLanguage(language: string): string {
@@ -255,6 +274,7 @@ export default {
     getDefaultModel,
     DEFAULT_SUBTASK: "transcribe",
     getDefaultLanguage,
+    getDefaultLiveModel,
     DEFAULT_QUANTIZED: isMobileOrTablet,
     DEFAULT_DTYPE: "q4",
     DEFAULT_GPU: typeof navigator !== "undefined" && !!navigator.gpu && !mobileTabletCheck(),

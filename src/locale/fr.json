@@ -48,7 +48,9 @@
             "start_recording": "Démarrer l'enregistrement",
             "stop_recording": "Arrêter l'enregistrement ({{duration}})",
             "recording_error": "Impossible d'accéder au microphone. Vérifiez les permissions du navigateur.",
-            "recording_preview": "Aperçu de l'audio enregistré"
+            "recording_preview": "Aperçu de l'audio enregistré",
+            "live_captioning": "Sous-titres en direct",
+            "classic_recording": "Enregistrement classique"
         },
         "transcribe_button": {
             "loading_model": "Chargement du modèle...",
@@ -73,6 +75,31 @@
             "seek_to_timestamp": "Aller à {{time}} : {{text}}",
             "transcribing_in_progress": "En cours...",
             "real_time_transcription": "Transcription en temps réel:"
+        },
+        "live": {
+            "region_label": "Sous-titres en direct",
+            "language_french": "Français",
+            "engine_group": "Moteur de transcription en direct",
+            "engine_local": "Local",
+            "engine_websocket": "Serveur",
+            "status_idle": "Prêt",
+            "status_connecting": "Connexion",
+            "status_listening": "Écoute",
+            "status_processing": "Traitement",
+            "status_stopping": "Arrêt",
+            "status_error": "Erreur",
+            "unsupported": "Micro non supporté",
+            "elapsed": "Durée",
+            "latency": "Latence",
+            "queue": "File",
+            "start": "Démarrer le direct",
+            "stop": "Arrêter",
+            "clear": "Effacer les sous-titres",
+            "export_group": "Exporter les sous-titres en direct",
+            "waiting_for_speech": "En attente de parole...",
+            "empty": "Appuyez sur Démarrer pour lancer.",
+            "history": "Historique des sous-titres",
+            "warning_lag": "L'appareil prend du retard : certains fragments audio ont été ignorés pour préserver le direct."
         },
         "language_selector": {
             "title": "Langue",

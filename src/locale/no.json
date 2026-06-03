@@ -48,7 +48,9 @@
             "start_recording": "Start opptak",
             "stop_recording": "Stopp opptak ({{duration}})",
             "recording_error": "Får ikke tilgang til mikrofonen. Kontroller nettlesertillatelsene.",
-            "recording_preview": "Forhåndsvisning av opptaket"
+            "recording_preview": "Forhåndsvisning av opptaket",
+            "live_captioning": "Direkteteksting",
+            "classic_recording": "Klassisk opptak"
         },
         "transcribe_button": {
             "loading_model": "Laster modell...",
@@ -73,6 +75,31 @@
             "seek_to_timestamp": "Gå til {{time}}: {{text}}",
             "transcribing_in_progress": "Pågår...",
             "real_time_transcription": "Sanntidstranskribering:"
+        },
+        "live": {
+            "region_label": "Direkteteksting",
+            "language_french": "Fransk",
+            "engine_group": "Motor for direkteteksting",
+            "engine_local": "Lokal",
+            "engine_websocket": "Server",
+            "status_idle": "Klar",
+            "status_connecting": "Kobler til",
+            "status_listening": "Lytter",
+            "status_processing": "Behandler",
+            "status_stopping": "Stopper",
+            "status_error": "Feil",
+            "unsupported": "Mikrofon støttes ikke",
+            "elapsed": "Tid",
+            "latency": "Forsinkelse",
+            "queue": "Kø",
+            "start": "Start direkte",
+            "stop": "Stopp",
+            "clear": "Tøm teksting",
+            "export_group": "Eksporter direkteteksting",
+            "waiting_for_speech": "Venter på tale...",
+            "empty": "Trykk Start for å begynne.",
+            "history": "Tekstingshistorikk",
+            "warning_lag": "Enheten ligger etter: noen lydfragmenter ble hoppet over for å holde direktetekstingen i gang."
         },
         "language_selector": {
             "title": "Språk",
