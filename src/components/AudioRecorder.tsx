@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import {
+    forwardRef,
+    useCallback,
+    useEffect,
+    useImperativeHandle,
+    useRef,
+    useState,
+} from "react";
 
 import { formatAudioTimestamp } from "../utils/AudioUtils";
 import { webmFixDuration } from "../utils/BlobFix";
@@ -20,10 +27,21 @@ function getMimeType() {
     return undefined;
 }
 
-export default function AudioRecorder(props: {
+export interface AudioRecorderHandle {
+    stopAndGetRecording: () => Promise<Blob | undefined>;
+}
+
+interface AudioRecorderProps {
     onRecordingProgress: (blob: Blob) => void;
     onRecordingComplete: (blob: Blob) => void;
-}) {
+    onRecordingStateChange?: (recording: boolean) => void;
+}
+
+const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>(
+function AudioRecorder(
+    { onRecordingProgress, onRecordingComplete, onRecordingStateChange },
+    ref,
+) {
     const [recording, setRecording] = useState(false);
     const [duration, setDuration] = useState(0);
     const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -33,13 +51,72 @@ export default function AudioRecorder(props: {
     const streamRef = useRef<MediaStream | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
+    const mimeTypeRef = useRef<string | undefined>(undefined);
+    const startTimeRef = useRef(0);
+    const stopPromiseRef = useRef<Promise<Blob | undefined> | null>(null);
+    const stopResolveRef = useRef<((blob: Blob | undefined) => void) | null>(
+        null,
+    );
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    const resolveStopPromise = useCallback((blob: Blob | undefined) => {
+        stopResolveRef.current?.(blob);
+        stopResolveRef.current = null;
+        stopPromiseRef.current = null;
+    }, []);
+
+    const completeRecording = useCallback(
+        async () => {
+            const mimeType = mimeTypeRef.current;
+            const recordedChunks = chunksRef.current;
+            chunksRef.current = [];
+            mediaRecorderRef.current = null;
+            setDuration(0);
+            setRecording(false);
+            onRecordingStateChange?.(false);
+
+            if (recordedChunks.length === 0) {
+                resolveStopPromise(undefined);
+                return;
+            }
+
+            const duration = Date.now() - startTimeRef.current;
+            let blob = new Blob(recordedChunks, { type: mimeType });
+
+            if (mimeType === "audio/webm") {
+                try {
+                    blob = await webmFixDuration(blob, duration, blob.type);
+                } catch (error) {
+                    console.error("Error fixing recording duration:", error);
+                }
+            }
+
+            setRecordedBlob(blob);
+            setRecordedUrl((previousUrl) => {
+                if (previousUrl) {
+                    URL.revokeObjectURL(previousUrl);
+                }
+                return URL.createObjectURL(blob);
+            });
+            onRecordingComplete(blob);
+            resolveStopPromise(blob);
+        },
+        [onRecordingComplete, onRecordingStateChange, resolveStopPromise],
+    );
 
     const startRecording = async () => {
         // Reset recording (if any)
         setRecordedBlob(null);
+        setRecordedUrl((previousUrl) => {
+            if (previousUrl) {
+                URL.revokeObjectURL(previousUrl);
+            }
+            return null;
+        });
         setRecordingError(null);
+        setDuration(0);
+        chunksRef.current = [];
 
         try {
             if (!streamRef.current) {
@@ -48,9 +125,10 @@ export default function AudioRecorder(props: {
                 });
             }
 
-            const startTime = Date.now();
+            startTimeRef.current = Date.now();
 
             const mimeType = getMimeType();
+            mimeTypeRef.current = mimeType;
             const mediaRecorder = new MediaRecorder(streamRef.current, {
                 mimeType,
             });
@@ -63,45 +141,61 @@ export default function AudioRecorder(props: {
                     return;
                 }
                 chunksRef.current.push(event.data);
-                const duration = Date.now() - startTime;
 
-                // Received a stop event
-                let blob = new Blob(chunksRef.current, { type: mimeType });
-
-                if (mediaRecorder.state === "inactive") {
-                    if (mimeType === "audio/webm") {
-                        blob = await webmFixDuration(blob, duration, blob.type);
-                    }
-                    setRecordedBlob(blob);
-                    setRecordedUrl((previousUrl) => {
-                        if (previousUrl) {
-                            URL.revokeObjectURL(previousUrl);
-                        }
-                        return URL.createObjectURL(blob);
-                    });
-                    props.onRecordingComplete(blob);
-
-                    chunksRef.current = [];
-                } else if (mediaRecorder.state === "recording") {
-                    props.onRecordingProgress(blob);
+                if (mediaRecorder.state === "recording") {
+                    onRecordingProgress(
+                        new Blob(chunksRef.current, { type: mimeType }),
+                    );
                 }
+            });
+            mediaRecorder.addEventListener("stop", () => {
+                void completeRecording();
             });
             mediaRecorder.start();
             setRecording(true);
+            onRecordingStateChange?.(true);
         } catch (error) {
             console.error("Error accessing microphone:", error);
             setRecordingError(t("recorder.recording_error"));
             setRecording(false);
+            onRecordingStateChange?.(false);
         }
     };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current?.state === "recording") {
-            mediaRecorderRef.current.stop(); // set state to inactive
+    const stopRecording = useCallback(() => {
+        const mediaRecorder = mediaRecorderRef.current;
+        if (stopPromiseRef.current) {
+            return stopPromiseRef.current;
+        }
+
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+            return Promise.resolve(recordedBlob ?? undefined);
+        }
+
+        stopPromiseRef.current = new Promise<Blob | undefined>((resolve) => {
+            stopResolveRef.current = resolve;
+        });
+
+        try {
+            mediaRecorder.stop();
             setDuration(0);
             setRecording(false);
+            onRecordingStateChange?.(false);
+        } catch (error) {
+            console.error("Error stopping recording:", error);
+            resolveStopPromise(recordedBlob ?? undefined);
         }
-    };
+
+        return stopPromiseRef.current;
+    }, [onRecordingStateChange, recordedBlob, resolveStopPromise]);
+
+    useImperativeHandle(
+        ref,
+        () => ({
+            stopAndGetRecording: stopRecording,
+        }),
+        [stopRecording],
+    );
 
     useEffect(() => {
         if (recording) {
@@ -135,9 +229,9 @@ export default function AudioRecorder(props: {
 
     const handleToggleRecording = () => {
         if (recording) {
-            stopRecording();
+            void stopRecording();
         } else {
-            startRecording();
+            void startRecording();
         }
     };
 
@@ -181,4 +275,6 @@ export default function AudioRecorder(props: {
             )}
         </div>
     );
-}
+});
+
+export default AudioRecorder;

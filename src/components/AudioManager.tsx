@@ -12,7 +12,7 @@ import Constants, {
 } from "../utils/Constants";
 import { Transcriber } from "../hooks/useTranscriber";
 import Progress from "./Progress";
-import AudioRecorder from "./AudioRecorder";
+import AudioRecorder, { type AudioRecorderHandle } from "./AudioRecorder";
 import { t } from "i18next";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -967,29 +967,50 @@ function RecordModal(props: {
     onLiveRequested?: () => void;
 }) {
     const [audioBlob, setAudioBlob] = useState<Blob>();
+    const [isRecording, setIsRecording] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showClassicRecorder, setShowClassicRecorder] = useState(
         () => props.onLiveRequested === undefined,
     );
+    const recorderRef = useRef<AudioRecorderHandle>(null);
 
     useEffect(() => {
         if (props.show) {
             setAudioBlob(undefined);
+            setIsRecording(false);
+            setIsSubmitting(false);
             setShowClassicRecorder(props.onLiveRequested === undefined);
         }
     }, [props.onLiveRequested, props.show]);
 
     const onRecordingComplete = (blob: Blob) => {
         setAudioBlob(blob);
+        setIsRecording(false);
     };
 
-    const onSubmit = () => {
-        props.onSubmit(audioBlob);
-        setAudioBlob(undefined);
+    const onSubmit = async () => {
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            const blob = isRecording
+                ? await recorderRef.current?.stopAndGetRecording()
+                : audioBlob;
+
+            if (blob) {
+                props.onSubmit(blob);
+                setAudioBlob(undefined);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const onClose = () => {
         props.onClose();
         setAudioBlob(undefined);
+        setIsRecording(false);
+        setIsSubmitting(false);
     };
 
     const onLiveRequested = () => {
@@ -1025,10 +1046,12 @@ function RecordModal(props: {
                         <div className={props.onLiveRequested ? "mt-4" : ""}>
                             {t("manager.record_description")}
                             <AudioRecorder
+                                ref={recorderRef}
                                 onRecordingProgress={(blob) => {
                                     props.onProgress(blob);
                                 }}
                                 onRecordingComplete={onRecordingComplete}
+                                onRecordingStateChange={setIsRecording}
                             />
                         </div>
                     )}
@@ -1036,7 +1059,11 @@ function RecordModal(props: {
             }
             onClose={onClose}
             submitText={showClassicRecorder ? t("manager.submit") : undefined}
-            submitEnabled={audioBlob !== undefined}
+            submitEnabled={
+                showClassicRecorder &&
+                !isSubmitting &&
+                (audioBlob !== undefined || isRecording)
+            }
             onSubmit={onSubmit}
         />
     );
