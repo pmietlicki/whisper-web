@@ -4,6 +4,8 @@
             "title": "Whisper Web",
             "subtitle": "Transcribe speech directly in your browser!",
             "footer": "The transcription is performed locally on your device. Your data remains private.",
+            "footer_local": "The transcription is performed locally on your device. Your data remains private.",
+            "footer_server": "In server mode, live audio is sent to the configured transcription server. Avoid sending sensitive data.",
             "footer_credits": "Created by <authorLink>Pierre Mesure</authorLink> based on a demo by <demoLink>Xenova</demoLink> ♥️",
             "skip_to_content": "Skip to main content",
             "webgpu_not_supported_1": "WebGPU is not supported",

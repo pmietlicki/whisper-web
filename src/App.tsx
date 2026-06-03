@@ -1,5 +1,6 @@
 import AudioManager from "./components/AudioManager";
 import LiveTranscriptionPanel from "./components/LiveTranscriptionPanel";
+import type { LiveEngine } from "./hooks/useLiveTranscription";
 import Transcript from "./components/Transcript";
 import { useTranscriber } from "./hooks/useTranscriber";
 import { Trans, useTranslation } from "react-i18next";
@@ -13,6 +14,7 @@ function App() {
     const [currentTime, setCurrentTime] = useState<number>(0);
     const [seekTime, setSeekTime] = useState<number | undefined>(undefined);
     const [showLivePanel, setShowLivePanel] = useState(false);
+    const [liveEngine, setLiveEngine] = useState<LiveEngine>("local");
 
     const { i18n, t } = useTranslation();
     const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
@@ -78,12 +80,23 @@ function App() {
                         currentTime={currentTime}
                         onSeek={handleSeek}
                     />
-                    {showLivePanel && <LiveTranscriptionPanel />}
+                    {showLivePanel && (
+                        <LiveTranscriptionPanel
+                            language={transcriber.language ?? currentLanguage}
+                            onEngineChange={setLiveEngine}
+                        />
+                    )}
                 </div>
 
 
                 <footer className='text-center m-4'>
-                    <b>{t("app.footer")}</b>
+                    <b>
+                        {t(
+                            showLivePanel && liveEngine === "websocket"
+                                ? "app.footer_server"
+                                : "app.footer_local",
+                        )}
+                    </b>
                     <br />
                     {SHOW_CREDITS && (
                     <Trans

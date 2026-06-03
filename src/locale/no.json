@@ -4,6 +4,8 @@
             "title": "Whisper Web",
             "subtitle": "Transkribere tale direkte i nettleseren din!",
             "footer": "Transkriberingen utføres lokalt på enheten din. Ingen data sendes noe sted.",
+            "footer_local": "Transkriberingen utføres lokalt på enheten din. Ingen data sendes noe sted.",
+            "footer_server": "I servermodus sendes direktelyden til den konfigurerte transkripsjonsserveren. Unngå å sende sensitive data.",
             "footer_credits": "Laget av <authorLink>Pierre Mesure</authorLink> basert på en demo av <demoLink>Xenova</demoLink> ♥️",
             "skip_to_content": "Hopp til hovedinnhold",
             "webgpu_not_supported_1": "WebGPU støttes ikke",

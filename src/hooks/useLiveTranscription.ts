@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWorker } from "./useWorker";
 import Constants from "../utils/Constants";
 
-type LiveEngine = "local" | "websocket";
+export type LiveEngine = "local" | "websocket";
 type LiveServerProtocol = "auto" | "whisperlivekit" | "whisperlive";
 type LiveStatus =
     | "idle"
@@ -480,12 +480,10 @@ export function useLiveTranscription({
     language,
 }: UseLiveTranscriptionOptions): LiveTranscriptionState {
     const availableEngines = useMemo<LiveEngine[]>(
-        () => (LIVE_WS_URL ? ["websocket", "local"] : ["local"]),
+        () => (LIVE_WS_URL ? ["local", "websocket"] : ["local"]),
         [],
     );
-    const [engine, setEngineState] = useState<LiveEngine>(
-        LIVE_WS_URL ? "websocket" : "local",
-    );
+    const [engine, setEngineState] = useState<LiveEngine>("local");
     const [status, setStatus] = useState<LiveStatus>("idle");
     const [error, setError] = useState<string>();
     const [warning, setWarning] = useState<string>();

@@ -4,6 +4,8 @@
             "title": "Whisper Web",
             "subtitle": "¡Transcribe el habla directamente en tu navegador!",
             "footer": "La transcripción se realiza localmente en tu navegador. Tus datos se quedan privados.",
+            "footer_local": "La transcripción se realiza localmente en tu navegador. Tus datos se quedan privados.",
+            "footer_server": "En modo servidor, el audio en directo se envía al servidor de transcripción configurado. Evita enviar datos sensibles.",
             "footer_credits": "Creado por <authorLink>Pierre Mesure</authorLink> basado en una demostración de <demoLink>Xenova</demoLink> ♥️",
             "skip_to_content": "Saltar al contenido principal",
             "webgpu_not_supported_1": "WebGPU no es compatible",

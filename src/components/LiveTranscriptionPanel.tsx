@@ -1,7 +1,13 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import type { LiveEngine } from "../hooks/useLiveTranscription";
 import { useLiveTranscription } from "../hooks/useLiveTranscription";
 import { MODELS } from "../utils/Constants";
+
+interface LiveTranscriptionPanelProps {
+    language: string;
+    onEngineChange?: (engine: LiveEngine) => void;
+}
 
 function formatDuration(seconds: number) {
     const minutes = Math.floor(seconds / 60);
@@ -101,9 +107,12 @@ function DownloadIcon() {
     );
 }
 
-export default function LiveTranscriptionPanel() {
-    const { i18n, t } = useTranslation();
-    const live = useLiveTranscription({ language: i18n.language });
+export default function LiveTranscriptionPanel({
+    language,
+    onEngineChange,
+}: LiveTranscriptionPanelProps) {
+    const { t } = useTranslation();
+    const live = useLiveTranscription({ language });
 
     const modelLabel = MODELS[live.model]?.[0] ?? live.model;
     const languageLabel = t(`language_selector.${live.language}`, {
@@ -114,6 +123,10 @@ export default function LiveTranscriptionPanel() {
         live.status === "processing" ||
         live.isModelLoading;
     const canExport = live.lines.length > 0;
+
+    useEffect(() => {
+        onEngineChange?.(live.engine);
+    }, [live.engine, onEngineChange]);
 
     const statusLabel = useMemo(() => {
         if (!live.isSupported) return t("live.unsupported");
