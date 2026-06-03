@@ -351,6 +351,20 @@ function floatToPcm16(samples: Float32Array) {
     return buffer;
 }
 
+function float32SamplesToBuffer(samples: Float32Array) {
+    if (
+        samples.byteOffset === 0 &&
+        samples.byteLength === samples.buffer.byteLength
+    ) {
+        return samples.buffer;
+    }
+
+    return samples.buffer.slice(
+        samples.byteOffset,
+        samples.byteOffset + samples.byteLength,
+    );
+}
+
 function resolveLiveServerProtocol(baseUrl: string): Exclude<
     LiveServerProtocol,
     "auto"
@@ -814,7 +828,7 @@ export function useLiveTranscription({
         (
             samples: Float32Array,
             sourceSampleRate: number,
-            sendFrame?: (frame: ArrayBuffer) => void,
+            sendFrame?: (samples: Float32Array) => void,
         ) => {
             sampleRateRef.current = sourceSampleRate;
 
@@ -827,7 +841,7 @@ export function useLiveTranscription({
                     sourceSampleRate,
                     Constants.SAMPLING_RATE,
                 );
-                sendFrame(floatToPcm16(resampled));
+                sendFrame(resampled);
                 return;
             }
 
@@ -877,7 +891,7 @@ export function useLiveTranscription({
     );
 
     const startPcmCapture = useCallback(
-        async (sendFrame?: (frame: ArrayBuffer) => void) => {
+        async (sendFrame?: (samples: Float32Array) => void) => {
             const AudioContextConstructor = getAudioContextConstructor();
             if (!AudioContextConstructor) {
                 throw new Error("AudioContext is not supported by this browser.");
@@ -1112,10 +1126,18 @@ export function useLiveTranscription({
                     socket.send(frame);
                 }
             };
-            const beginPcmCapture = () => {
+            const sendWhisperLiveFrame = (samples: Float32Array) => {
+                sendPcmFrame(float32SamplesToBuffer(samples));
+            };
+            const sendPcm16Frame = (samples: Float32Array) => {
+                sendPcmFrame(floatToPcm16(samples));
+            };
+            const beginPcmCapture = (
+                sendSamples: (samples: Float32Array) => void,
+            ) => {
                 if (captureStarted) return;
                 captureStarted = true;
-                startPcmCapture(sendPcmFrame)
+                startPcmCapture(sendSamples)
                     .then(() => {
                         setStatus("listening");
                         settleResolve();
@@ -1134,7 +1156,11 @@ export function useLiveTranscription({
             };
             const timeout = window.setTimeout(() => {
                 if (!captureStarted && socket.readyState === WebSocket.OPEN) {
-                    beginPcmCapture();
+                    beginPcmCapture(
+                        protocol === "whisperlive"
+                            ? sendWhisperLiveFrame
+                            : sendPcm16Frame,
+                    );
                 }
             }, protocol === "whisperlive" ? 4000 : 2000);
 
@@ -1167,7 +1193,7 @@ export function useLiveTranscription({
                     !captureStarted
                 ) {
                     window.clearTimeout(timeout);
-                    beginPcmCapture();
+                    beginPcmCapture(sendWhisperLiveFrame);
                     applyWebSocketMessage(message);
                     return;
                 }
@@ -1175,7 +1201,7 @@ export function useLiveTranscription({
                 if (message.type === "config" && !captureStarted) {
                     window.clearTimeout(timeout);
                     if (message.useAudioWorklet) {
-                        beginPcmCapture();
+                        beginPcmCapture(sendPcm16Frame);
                     } else {
                         beginEncodedCapture();
                     }
